@@ -143,6 +143,7 @@
     <Compile Include="ConsoleCommands\SwapSerializerCommand.cs" />
     <Compile Include="ConsoleCommands\TeleportCommand.cs" />
     <Compile Include="ConsoleCommands\TimeCommand.cs" />
+    <Compile Include="ConsoleCommands\TimeSpeedCommand.cs" />
     <Compile Include="ConsoleCommands\WarpCommand.cs" />
     <Compile Include="ConsoleCommands\WhisperCommand.cs" />
     <Compile Include="ConsoleCommands\WhoisCommand.cs" />

@@ -72,6 +72,7 @@
     <Compile Include="Patches\Dynamic\CyclopsSonarButton_OnClick_Patch.cs" />
     <Compile Include="Patches\Dynamic\CyclopsSonarButton_SonarPing_Patch.cs" />
     <Compile Include="Patches\Dynamic\DayNightCycle_OnConsoleCommand_day_Patch.cs" />
+    <Compile Include="Patches\Dynamic\DayNightCycle_OnConsoleCommand_daynightspeed_Patch.cs" />
     <Compile Include="Patches\Dynamic\DayNightCycle_OnConsoleCommand_night_Patch.cs" />
     <Compile Include="Patches\Dynamic\DevConsole_Update_Patch.cs" />
     <Compile Include="Patches\Dynamic\DockedVehicleHandTarget_OnHandClick_Patch.cs" />

@@ -84,7 +84,7 @@ namespace NitroxServer.Communication.Packets.Processors
                 player.Permissions
             );
 
-            eventTriggerer.SendCurrentTimePacket(true);
+            playerManager.SendPacketToAllPlayers(new TimeChange(eventTriggerer.ElapsedSeconds, true));
             player.SendPacket(initialPlayerSync);
         }
 

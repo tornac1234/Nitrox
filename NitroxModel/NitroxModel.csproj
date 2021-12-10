@@ -197,6 +197,7 @@
     <Compile Include="Packets\SubRootChanged.cs" />
     <Compile Include="Packets\Schedule.cs" />
     <Compile Include="Packets\TimeChange.cs" />
+    <Compile Include="Packets\TimeSpeedChange.cs" />
     <Compile Include="Packets\ToggleLights.cs" />
     <Compile Include="Packets\VehicleChildUpdate.cs" />
     <Compile Include="Packets\VehicleColorChange.cs" />
@@ -248,6 +249,8 @@
     <Compile Include="Serialization\ServerList.cs" />
     <Compile Include="Server\ServerGameMode.cs" />
     <Compile Include="Server\ServerSerializerMode.cs" />
+    <Compile Include="Utility\AdjustableStopWatch.cs" />
+    <Compile Include="Utility\AdjustableTimer.cs" />
   </ItemGroup>
   <ItemGroup Label="NuGet Package">
     <PackageReference Include="Autofac">

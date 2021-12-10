@@ -1,20 +1,19 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Timers;
 using NitroxModel.Packets;
+using NitroxModel.Utility;
 
 namespace NitroxServer.GameLogic
 {
     public class EventTriggerer
     {
-        internal readonly Dictionary<string, Timer> eventTimers = new();
-        private readonly Stopwatch stopWatch = new();
+        internal readonly Dictionary<string, AdjustableTimer> eventTimers = new();
+        internal readonly AdjustableStopWatch stopWatch = new();
         private readonly PlayerManager playerManager;
 
         public readonly double AuroraExplosionTime;
-
-        private double elapsedTimeOutsideStopWatch;
+        internal double elapsedTimeOutsideStopWatch;
+        private float TimeSpeed;
 
         public double ElapsedTime
         {
@@ -31,6 +30,7 @@ namespace NitroxServer.GameLogic
         public EventTriggerer(PlayerManager playerManager, double elapsedTime, double? auroraExplosionTime)
         {
             this.playerManager = playerManager;
+            TimeSpeed = 1f;
             elapsedTimeOutsideStopWatch = elapsedTime;
 
             Log.Debug($"Event Triggerer started! ElapsedTime={Math.Floor(ElapsedSeconds)}s");
@@ -62,7 +62,7 @@ namespace NitroxServer.GameLogic
                 return;
             }
 
-            Timer timer = new()
+            AdjustableTimer timer = new()
             {
                 Interval = time,
                 Enabled = true,
@@ -101,7 +101,7 @@ namespace NitroxServer.GameLogic
 
         public void StartEventTimers()
         {
-            foreach (Timer eventTimer in eventTimers.Values)
+            foreach (AdjustableTimer eventTimer in eventTimers.Values)
             {
                 eventTimer.Start();
             }
@@ -109,15 +109,19 @@ namespace NitroxServer.GameLogic
 
         public void PauseEventTimers()
         {
-            foreach (Timer eventTimer in eventTimers.Values)
+            foreach (AdjustableTimer eventTimer in eventTimers.Values)
             {
                 eventTimer.Stop();
             }
         }
 
-        public void SendCurrentTimePacket(bool initialSync)
+        public void SetTimeSpeed(float speed)
         {
-            playerManager.SendPacketToAllPlayers(new TimeChange(ElapsedSeconds, initialSync));
+            stopWatch.Speed = speed;
+            foreach (AdjustableTimer timer in eventTimers.Values)
+            {
+                timer.SetSpeed(speed, stopWatch.ElapsedMilliseconds);
+            }
         }
 
         public void ChangeTime(TimeModification type)
@@ -135,7 +139,7 @@ namespace NitroxServer.GameLogic
                     break;
             }
 
-            SendCurrentTimePacket(false);
+            playerManager.SendPacketToAllPlayers(new TimeChange(ElapsedSeconds, false));
         }
 
         public enum TimeModification

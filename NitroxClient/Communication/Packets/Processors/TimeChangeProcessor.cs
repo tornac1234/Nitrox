@@ -17,7 +17,6 @@ namespace NitroxClient.Communication.Packets.Processors
             if (timeChangePacket.InitialSync)
             {
                 AuroraWarnings auroraWarnings = GameObject.Find("Player/SpawnPlayerSounds/PlayerSounds(Clone)/auroraWarnings").GetComponent<AuroraWarnings>();
-
                 Utils.ScalarMonitor auroraTimeMonitor = auroraWarnings.timeMonitor;
                 auroraTimeMonitor.Init((float)newTimePassedAsDouble);
 
