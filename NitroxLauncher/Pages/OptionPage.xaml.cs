@@ -1,8 +1,12 @@
-﻿using System.ComponentModel;
+﻿using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Windows;
 using Microsoft.WindowsAPICodePack.Dialogs;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 using NitroxLauncher.Models;
+using NitroxLauncher.Models.Utils;
 using NitroxModel.Discovery;
 
 namespace NitroxLauncher.Pages
@@ -90,6 +94,70 @@ namespace NitroxLauncher.Pages
                 LauncherNotifier.Success("Applied changes");
                 return;
             }
+        }
+
+        private void ForceModsCompat_Click(object sender, RoutedEventArgs e)
+        {
+            int patchedMods = 0;
+            if (!QModHelper.IsQModInstalled(LauncherLogic.Config.SubnauticaPath))
+            {
+                LauncherNotifier.Error("QModManager is not installed, didn't force any compatibility");
+                return;
+            }
+           
+            foreach ((string, Dictionary<string, object>) qMod in GetQMods())
+            {
+                if (!qMod.Item2.ContainsKey("NitroxCompat"))
+                {
+                    qMod.Item2.Add("NitroxCompat", true);
+                    patchedMods++;
+                }
+
+                File.WriteAllText(qMod.Item1, JsonConvert.SerializeObject(qMod.Item2));
+            }
+
+            LauncherNotifier.Success($"Forced {patchedMods} mods compatibility");
+        }
+
+        private void RemoveModsCompat_Click(object sender, RoutedEventArgs e)
+        {
+            int patchedMods = 0;
+            if (!QModHelper.IsQModInstalled(LauncherLogic.Config.SubnauticaPath))
+            {
+                LauncherNotifier.Error("QModManager is not installed, didn't force any compatibility");
+                return;
+            }
+
+            foreach ((string, Dictionary<string, object>) qMod in GetQMods())
+            {
+                if (qMod.Item2.Remove("NitroxCompat"))
+                {
+                    patchedMods++;
+                    File.WriteAllText(qMod.Item1, JsonConvert.SerializeObject(qMod.Item2));
+                }
+            }
+
+            LauncherNotifier.Success($"Removed compatibility for {patchedMods} mods");
+        }
+
+        private List<(string, Dictionary<string, object>)> GetQMods()
+        {
+            List<(string, Dictionary<string, object>)> qMods = new();
+            string qModsPath = Path.Combine(LauncherLogic.Config.SubnauticaPath, "QMods");
+            string[] files = Directory.GetDirectories(qModsPath);
+            foreach (string file in files)
+            {
+                string modFile = Path.Combine(file, "mod.json");
+                if (File.Exists(modFile))
+                {
+                    using StreamReader r = new(modFile);
+                    string json = r.ReadToEnd();
+                    Dictionary<string, object> modObject = JsonConvert.DeserializeObject<Dictionary<string, object>>(json);
+                    r.Close();
+                    qMods.Add((modFile, modObject));
+                }
+            }
+            return qMods;
         }
 
         private void OnLogicPropertyChanged(object sender, PropertyChangedEventArgs args)
