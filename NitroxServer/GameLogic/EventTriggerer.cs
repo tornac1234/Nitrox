@@ -7,6 +7,7 @@ using NitroxModel.DataStructures.GameLogic;
 using NitroxModel.Packets;
 using NitroxServer.Helper;
 using NitroxServer.GameLogic.Unlockables;
+using static NitroxModel.Packets.SunbeamUpdate;
 
 namespace NitroxServer.GameLogic
 {
@@ -20,11 +21,16 @@ namespace NitroxServer.GameLogic
         private readonly PlayerManager playerManager;
         private readonly PDAStateData pdaStateData;
         private readonly StoryGoalData storyGoalData;
+        private readonly SunbeamData sunbeamData;
         private string seed;
 
         public double AuroraExplosionTimeMs;
         // Necessary to calculate the timers correctly
         public double AuroraWarningTimeMs;
+
+        public Dictionary<string, SunbeamEvent> SunbeamEvents = new();
+        public double SunbeamEndTimeMs => sunbeamData.CountdownStartingTimeMs + 2400f * 1000f;
+        public Timer SunbeamExplosionTimer;
 
         private double elapsedTimeOutsideStopWatchMs;
 
@@ -59,17 +65,21 @@ namespace NitroxServer.GameLogic
         // Using ceiling because days count start at 1 and not 0
         public int Day => (int)Math.Ceiling(ElapsedTimeMs / TimeSpan.FromMinutes(20).TotalMilliseconds);
 
-        public EventTriggerer(PlayerManager playerManager, PDAStateData pdaStateData, StoryGoalData storyGoalData, string seed, double elapsedTime, double? auroraExplosionTime, double? auroraWarningTime)
+        public EventTriggerer(PlayerManager playerManager, PDAStateData pdaStateData, StoryGoalData storyGoalData, SunbeamData sunbeamData, string seed, double elapsedTime, double? auroraExplosionTime, double? auroraWarningTime)
         {
             this.playerManager = playerManager;
             this.pdaStateData = pdaStateData;
             this.storyGoalData = storyGoalData;
+            this.sunbeamData = sunbeamData;
             this.seed = seed;
+
+            FillSunbeamEvents();
             // Default time in Base SN is 480s
             elapsedTimeOutsideStopWatchMs = elapsedTime == 0 ? TimeSpan.FromSeconds(480).TotalMilliseconds : elapsedTime;
             AuroraExplosionTimeMs = auroraExplosionTime ?? GenerateDeterministicAuroraTime(seed);
             AuroraWarningTimeMs = auroraWarningTime ?? ElapsedTimeMs;
-            CreateEventTimers();
+            CreateAuroraEventTimers();
+            CreateSunbeamEventTimer();
             stopWatch.Start();
             Log.Debug($"Event Triggerer started! ElapsedTime={Math.Floor(ElapsedSeconds)}s");
             Log.Debug($"Aurora will explode in {GetMinutesBeforeAuroraExplosion()} minutes");
@@ -78,7 +88,7 @@ namespace NitroxServer.GameLogic
         /// <summary>
         /// Creates every timer that will keep track of the time before we need to trigger an event
         /// </summary>
-        private void CreateEventTimers()
+        private void CreateAuroraEventTimers()
         {
             double ExplosionCycleDuration = AuroraExplosionTimeMs - AuroraWarningTimeMs;
             // If aurora's warning is set to later than explosion's time, we don't want to create any timer
@@ -87,12 +97,91 @@ namespace NitroxServer.GameLogic
                 return;
             }
             double TimePassedSinceWarning = ElapsedTimeMs - AuroraWarningTimeMs;
-            CreateTimer(ExplosionCycleDuration * 0.2d - TimePassedSinceWarning, StoryEventSend.EventType.PDA_EXTRA, "Story_AuroraWarning1");
-            CreateTimer(ExplosionCycleDuration * 0.5d - TimePassedSinceWarning, StoryEventSend.EventType.PDA_EXTRA, "Story_AuroraWarning2");
-            CreateTimer(ExplosionCycleDuration * 0.8d - TimePassedSinceWarning, StoryEventSend.EventType.PDA_EXTRA, "Story_AuroraWarning3");
+            CreateSunbeamTimer(ExplosionCycleDuration * 0.2d - TimePassedSinceWarning, StoryEventSend.EventType.PDA_EXTRA, "Story_AuroraWarning1");
+            CreateSunbeamTimer(ExplosionCycleDuration * 0.5d - TimePassedSinceWarning, StoryEventSend.EventType.PDA_EXTRA, "Story_AuroraWarning2");
+            CreateSunbeamTimer(ExplosionCycleDuration * 0.8d - TimePassedSinceWarning, StoryEventSend.EventType.PDA_EXTRA, "Story_AuroraWarning3");
             // Story_AuroraWarning4 and Story_AuroraExplosion must occur at the same time
-            CreateTimer(ExplosionCycleDuration - TimePassedSinceWarning, StoryEventSend.EventType.PDA_EXTRA, "Story_AuroraWarning4");
-            CreateTimer(ExplosionCycleDuration - TimePassedSinceWarning, StoryEventSend.EventType.EXTRA, "Story_AuroraExplosion");
+            CreateSunbeamTimer(ExplosionCycleDuration - TimePassedSinceWarning, StoryEventSend.EventType.PDA_EXTRA, "Story_AuroraWarning4");
+            CreateSunbeamTimer(ExplosionCycleDuration - TimePassedSinceWarning, StoryEventSend.EventType.EXTRA, "Story_AuroraExplosion");
+        }
+
+        /// <summary>
+        /// Updates saved sunbeam's countdown activity only if it's different than the previously registered one
+        /// </summary>
+        public void UpdateSunbeamState(bool countdownActive)
+        {
+            // We want to ignore any packet we would have received twice
+            if (sunbeamData.CountdownActive == countdownActive)
+            {
+                return;
+            }
+
+            // We update local information
+            sunbeamData.CountdownActive = countdownActive;
+            
+            // And conveniently treat the information according the provided state of the countdown
+            SunbeamUpdate sunbeamUpdate = new(countdownActive);
+            if (countdownActive)
+            {
+                sunbeamData.CountdownStartingTimeMs = (float)ElapsedTimeMs;
+                // On client-side, the countdown is in seconds
+                sunbeamUpdate.CountdownStartingTime = sunbeamData.CountdownStartingTimeMs * 0.001;
+                playerManager.SendPacketToAllPlayers(new TimeChange(ElapsedSeconds));
+                CreateSunbeamEventTimer();
+            }
+            else
+            {
+                if (SunbeamExplosionTimer != null)
+                {
+                    SunbeamExplosionTimer.Stop();
+                    SunbeamExplosionTimer.Dispose();
+                }
+            }
+
+            playerManager.SendPacketToAllPlayers(sunbeamUpdate);
+        }
+
+        /// <summary>
+        /// Create a timer for the sunbeam explosion event only if the countdown is already active
+        /// </summary>
+        private void CreateSunbeamEventTimer()
+        {
+            // We only want to create the timer if the cooldown is active
+            if (!sunbeamData.CountdownActive)
+            {
+                return;
+            }
+            double time = SunbeamEndTimeMs - ElapsedTimeMs;
+            Log.Debug($"Creating sunbeam even timer with time {time}");
+
+            TryCreateTimerWithCallback(time, delegate ()
+            {
+                Log.Info($"Triggering event at time {time} with param PrecursorGunAimCheck");
+                playerManager.SendPacketToAllPlayers(new StoryEventSend(StoryEventSend.EventType.STORY, "PrecursorGunAimCheck"));
+                UpdateSunbeamState(false);
+                SunbeamExplosionTimer = null;
+            }, out SunbeamExplosionTimer);
+        }
+
+        private void FillSunbeamEvents()
+        {
+            SunbeamEvents["RadioSunbeam1"] = new(0, StoryEventSend.EventType.RADIO, "RadioSunbeam1", "RadioSunbeamStart");
+            SunbeamEvents["RadioSunbeam2"] = new(600, StoryEventSend.EventType.RADIO, "RadioSunbeam2", "OnPlayRadioSunbeam1");
+            SunbeamEvents["RadioSunbeam3"] = new(2400, StoryEventSend.EventType.RADIO, "RadioSunbeam3", "OnPlayRadioSunbeam2");
+            SunbeamEvents["RadioSunbeam4"] = new(2400, StoryEventSend.EventType.RADIO, "RadioSunbeam4", "OnPlayRadioSunbeam3");
+            SunbeamEvents["PrecursorGunAim"] = new(0, StoryEventSend.EventType.STORY, "PrecursorGunAim", "PrecursorGunAimCheck");
+
+            SunbeamEvents["SunbeamCancel"] = new(2400, StoryEventSend.EventType.RADIO, "RadioSunbeamCancel");
+            SunbeamEvents["PDASunbeamDestroyEventInRange"] = new(0, StoryEventSend.EventType.PDA, "PDASunbeamDestroyEventInRange");
+            SunbeamEvents["PDASunbeamDestroyEventOutOfRange"] = new(22, StoryEventSend.EventType.PDA, "PDASunbeamDestroyEventOutOfRange");
+            SunbeamEvents["Goal_Disable_Gun"] = new(0, StoryEventSend.EventType.STORY, "Goal_Disable_Gun");
+        }
+
+        private void SendSunbeamCancel()
+        {
+            SunbeamEvent sunbeamCancel = SunbeamEvents["SunbeamCancel"];
+            playerManager.SendPacketToAllPlayers(new StoryEventSend(sunbeamCancel.GoalType, sunbeamCancel.Key));
+            Log.Info($"Triggering event type {sunbeamCancel.GoalType} at time {ElapsedTimeMs} with param {sunbeamCancel.Key}");
         }
 
         /// <summary>
@@ -100,14 +189,30 @@ namespace NitroxServer.GameLogic
         /// in which case we don't want to create the timer
         /// </summary>
         /// <param name="time">In milliseconds</param>
-        private void CreateTimer(double time, StoryEventSend.EventType eventType, string key)
+        private void CreateSunbeamTimer(double time, StoryEventSend.EventType eventType, string key)
         {
+            if (TryCreateTimerWithCallback(time, delegate ()
+            {
+                eventTimers.Remove(key);
+                Log.Info($"Triggering event type {eventType} at time {time} with param {key}");
+                playerManager.SendPacketToAllPlayers(new StoryEventSend(eventType, key));
+            }, out Timer timer))
+            {
+                Log.Debug($"Created sunbeam timer, it will explode in {time}ms");
+                eventTimers.Add(key, timer);
+            }
+        }
+
+        private bool TryCreateTimerWithCallback(double time, Action action, out Timer timer)
+        {
+            // If time is not valid, we just want to make sure that the timer will still be created
             if (time <= 0)
             {
-                return;
+                timer = new Timer();
+                return false;
             }
 
-            Timer timer = new()
+            timer = new()
             {
                 Interval = time,
                 Enabled = true,
@@ -115,12 +220,9 @@ namespace NitroxServer.GameLogic
             };
             timer.Elapsed += delegate
             {
-                eventTimers.Remove(key);
-                Log.Info($"Triggering event type {eventType} at time {time} with param {key}");
-                playerManager.SendPacketToAllPlayers(new StoryEventSend(eventType, key));
+                action();
             };
-
-            eventTimers.Add(key, timer);
+            return true;
         }
 
         /// <summary>
@@ -155,7 +257,7 @@ namespace NitroxServer.GameLogic
             ClearTimers();
             AuroraExplosionTimeMs = GenerateDeterministicAuroraTime(seed) + ElapsedTimeMs;
             AuroraWarningTimeMs = ElapsedTimeMs;
-            CreateEventTimers();
+            CreateAuroraEventTimers();
             // We need to clear these entries from PdaLog and CompletedGoals to make sure that the client, when reconnecting, doesn't have false information
             foreach (string timerKey in eventTimers.Keys)
             {
@@ -166,6 +268,39 @@ namespace NitroxServer.GameLogic
             }
             playerManager.SendPacketToAllPlayers(new AuroraRestore());
             Log.Info($"Restored Aurora, will explode again in {GetMinutesBeforeAuroraExplosion()} minutes");
+        }
+
+        /// <summary>
+        /// Starts the sunbeam timer and notifies every connected client
+        /// </summary>
+        public void StartSunbeamCountdown()
+        {
+            // TODO: clean the events that only play once
+            // The SunbeamUpdate packet with the SunbeamUpdateType must be sent first because it contains important information that must be processed before the following one
+            // Explanation can be found there: SunbeamUpdateProcessor.cs (NitroxClient)
+            playerManager.SendPacketToAllPlayers(new SunbeamUpdate(SunbeamUpdateType.SUNBEAMCOUNTDOWNSTART));
+            UpdateSunbeamState(true);
+        }
+
+        /// <summary>
+        /// Tells every connected client to start the precursor gun aim cinematic
+        /// </summary>
+        public void PrecursorGunAim()
+        {
+            playerManager.SendPacketToAllPlayers(new TimeChange(ElapsedSeconds));
+            playerManager.SendPacketToAllPlayers(new SunbeamUpdate(SunbeamUpdateType.PRECURSORGUNAIM));
+        }
+
+        /// <summary>
+        /// Tells every client to start the sunbeam story and to remove any trace of sunbeam radio goals they could have
+        /// </summary>
+        public void StartSunbeamStory()
+        {
+            // TODO: Remove sunbeam radio goals from saved list and notify the client
+
+            // storyGoalData.CompletedGoals.RemoveAll()
+            playerManager.SendPacketToAllPlayers(new TimeChange(ElapsedSeconds));
+            playerManager.SendPacketToAllPlayers(new SunbeamUpdate(SunbeamUpdateType.STARTSUNBEAMSTORY));
         }
 
         /// <summary>
@@ -245,6 +380,11 @@ namespace NitroxServer.GameLogic
             return $"explodes in {minutesBeforeExplosion} minutes{stateNumber}";
         }
 
+        public bool GunDisabled()
+        {
+            return storyGoalData.CompletedGoals.Contains("Goal_Disable_Gun");
+        }
+
         internal void ResetWorld()
         {
             stopWatch.Reset();
@@ -269,12 +409,32 @@ namespace NitroxServer.GameLogic
                     break;
             }
 
-            playerManager.SendPacketToAllPlayers(new TimeChange(ElapsedSeconds, false));
+            playerManager.SendPacketToAllPlayers(new TimeChange(ElapsedSeconds));
         }
 
         public enum TimeModification
         {
             DAY, NIGHT, SKIP
+        }
+
+        public class SunbeamEvent
+        {
+            public int Delay;
+            public StoryEventSend.EventType GoalType;
+            public string Key;
+            public string Trigger;
+
+            public SunbeamEvent(int delay, StoryEventSend.EventType goalType, string key, string trigger) : this(delay, goalType, key)
+            {
+                Trigger = trigger;
+            }
+
+            public SunbeamEvent(int delay, StoryEventSend.EventType goalType, string key) : base()
+            {
+                Delay = delay;
+                GoalType = goalType;
+                Key = key;
+            }
         }
     }
 }

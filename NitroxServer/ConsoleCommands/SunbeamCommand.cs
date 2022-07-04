@@ -5,18 +5,14 @@ using NitroxServer.GameLogic;
 
 namespace NitroxServer.ConsoleCommands;
 
-// TODO: When we have the command system, we'll need to move this stuff to the new system, do the same for SunbeamCommand
-/// <summary>
-/// Centralize commands concerning Aurora, replacing clients' ones
-/// </summary>
-public class AuroraCommand : Command
+public class SunbeamCommand : Command
 {
     private readonly EventTriggerer eventTriggerer;
 
     // We shouldn't let the server use this command because it needs some stuff to happen client-side like goals
-    public AuroraCommand(EventTriggerer eventTriggerer) : base("aurora", Perms.ADMIN, PermsFlag.NO_CONSOLE, "Manage Aurora's state")
+    public SunbeamCommand(EventTriggerer eventTriggerer) : base("sunbeam", Perms.ADMIN, PermsFlag.NO_CONSOLE, "Manage Sunbeam's story state")
     {
-        AddParameter(new TypeString("countdown/restore/explode", true, "Which action to apply to Aurora"));
+        AddParameter(new TypeString("countdown/gunaim/story", true, "Which action to pick from Sunbeam story"));
 
         this.eventTriggerer = eventTriggerer;
     }
@@ -28,13 +24,13 @@ public class AuroraCommand : Command
         switch (action.ToLower())
         {
             case "countdown":
-                eventTriggerer.ExplodeAurora(true);
+                eventTriggerer.StartSunbeamCountdown();
                 break;
-            case "restore":
-                eventTriggerer.RestoreAurora();
+            case "gunaim":
+                eventTriggerer.PrecursorGunAim();
                 break;
-            case "explode":
-                eventTriggerer.ExplodeAurora(false);
+            case "story":
+                eventTriggerer.StartSunbeamStory();
                 break;
             default:
                 // Same message as in the abstract class, in method TryExecute

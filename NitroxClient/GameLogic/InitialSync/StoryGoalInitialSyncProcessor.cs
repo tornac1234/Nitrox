@@ -14,23 +14,27 @@ namespace NitroxClient.GameLogic.InitialSync
         public override IEnumerator Process(InitialPlayerSync packet, WaitScreen.ManualWaitItem waitScreenItem)
         {
             SetCompletedStoryGoals(packet.StoryGoalData.CompletedGoals);
-            waitScreenItem.SetProgress(0.2f);
+            waitScreenItem.SetProgress(0.17f);
             yield return null;
 
             SetRadioQueue(packet.StoryGoalData.RadioQueue);
-            waitScreenItem.SetProgress(0.4f);
+            waitScreenItem.SetProgress(0.33f);
             yield return null;
 
             SetGoalUnlocks(packet.StoryGoalData.GoalUnlocks);
-            waitScreenItem.SetProgress(0.6f);
+            waitScreenItem.SetProgress(0.5f);
             yield return null;
 
             SetBiomeGoalTrackerGoals();
-            waitScreenItem.SetProgress(0.8f);
+            waitScreenItem.SetProgress(0.67f);
             yield return null;
 
             SetScheduledGoals(packet.StoryGoalData.ScheduledGoals);
-            waitScreenItem.SetProgress(1f);
+            waitScreenItem.SetProgress(.83f);
+            yield return null;
+
+            SetupSunbeam(packet.InitialSunbeamData);
+            waitScreenItem.SetProgress(1.0f);
             yield return null;
         }
 
@@ -100,6 +104,15 @@ namespace NitroxClient.GameLogic.InitialSync
                     StoryGoalScheduler.main.schedule.Add(goal);
                 }
             }
+        }
+
+        private void SetupSunbeam(InitialSunbeamData initialSunbeamData)
+        {
+            StoryGoalCustomEventHandler storyMain = StoryGoalCustomEventHandler.main;
+            storyMain.countdownActive = initialSunbeamData.CountdownActive;
+            // countdownStartingTime must be in seconds
+            storyMain.countdownStartingTime = (float)initialSunbeamData.CountdownStartingTimeMs * 0.001f;
+            storyMain.Awake();
         }
     }
 }

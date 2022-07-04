@@ -163,6 +163,7 @@ public sealed class SceneExtraDebugger : BaseDebugger
             {
                 if (gameObjectSearch.StartsWith("t:"))
                 {
+                    bool filled = false;
                     Type type = AppDomain.CurrentDomain.GetAssemblies()
                                          .Select(a => a.GetType(gameObjectSearch.Substring(2), false, true))
                                          .FirstOrDefault(t => t != null);
@@ -172,10 +173,42 @@ public sealed class SceneExtraDebugger : BaseDebugger
                                                                 .Where(g => g.GetComponent(type))
                                                                 .ToList();
                         gameObjectResults = gameObjects;
+                        filled = true;
                     }
                     else
                     {
                         GUILayout.Label($"There is no component named \"{gameObjectSearch.Substring(2)}\"", "error");
+                    }
+
+                    List<MonoBehaviour> list1 = GameObject.FindObjectsOfType<MonoBehaviour>().ToList();
+                    List<MonoBehaviour> list2 = Resources.FindObjectsOfTypeAll<MonoBehaviour>().ToList();
+                    List<MonoBehaviour> list3 = list1.Except(list2).ToList();
+                    List<MonoBehaviour> list4 = list2.Except(list1).ToList();
+                    // Log.Debug($"List1: {list1.Count}, List2: {list2.Count}, List3: {list3.Count}, List4: {list4.Count}");
+
+
+                    List<MonoBehaviour> monoBehaviours = Resources.FindObjectsOfTypeAll<MonoBehaviour>().Where(mono =>
+                    {
+                        // Log.Debug($"MonoBehaviour type : {mono.GetType()}, name {mono.name}");
+                        // Log.Debug($"{mono.GetType()} : {gameObjectSearch.Substring(2)}");
+                        return mono.GetType().ToString().ToLower().Contains(gameObjectSearch.Substring(2));
+                    }).ToList();
+                    if (monoBehaviours.Count > 0)
+                    {
+                        if (filled)
+                        {
+                            foreach (MonoBehaviour monoBehaviour in monoBehaviours)
+                            {
+                                if (!gameObjectResults.Contains(monoBehaviour.gameObject))
+                                {
+                                    gameObjectResults.Add(monoBehaviour.gameObject);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            gameObjectResults = monoBehaviours.ConvertAll(mono => mono.gameObject);
+                        }
                     }
                 }
                 else

@@ -8,7 +8,7 @@ namespace NitroxModel.Packets
         public double CurrentTime { get; }
         public bool InitialSync { get; }
 
-        public TimeChange(double currentTime, bool initialSync)
+        public TimeChange(double currentTime, bool initialSync = false)
         {
             CurrentTime = currentTime;
             InitialSync = initialSync;

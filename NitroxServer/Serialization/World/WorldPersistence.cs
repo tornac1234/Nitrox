@@ -149,7 +149,8 @@ namespace NitroxServer.Serialization.World
                     {
                         PDAState = new PDAStateData(),
                         StoryGoals = new StoryGoalData(),
-                        StoryTiming = new StoryTimingData()
+                        StoryTiming = new StoryTimingData(),
+                        SunbeamData = new SunbeamData()
                     },
                     InventoryData = InventoryData.From(new List<ItemData>(), new List<ItemData>(), new List<EquippedItemData>()),
                     VehicleData = VehicleData.From(new List<VehicleModel>()),
@@ -191,7 +192,7 @@ namespace NitroxServer.Serialization.World
                 Seed = seed
             };
 
-            world.EventTriggerer = new EventTriggerer(world.PlayerManager, pWorldData.WorldData.GameData.PDAState, pWorldData.WorldData.GameData.StoryGoals, seed, pWorldData.WorldData.GameData.StoryTiming.ElapsedTime, pWorldData.WorldData.GameData.StoryTiming.AuroraExplosionTime, pWorldData.WorldData.GameData.StoryTiming.AuroraWarningTime);
+            world.EventTriggerer = new EventTriggerer(world.PlayerManager, pWorldData.WorldData.GameData.PDAState, pWorldData.WorldData.GameData.StoryGoals, pWorldData.WorldData.GameData.SunbeamData, seed, pWorldData.WorldData.GameData.StoryTiming.ElapsedTime, pWorldData.WorldData.GameData.StoryTiming.AuroraExplosionTime, pWorldData.WorldData.GameData.StoryTiming.AuroraWarningTime);
             world.VehicleManager = new VehicleManager(pWorldData.WorldData.VehicleData.Vehicles, world.InventoryManager);
             world.ScheduleKeeper = new ScheduleKeeper(pWorldData.WorldData.GameData.PDAState, pWorldData.WorldData.GameData.StoryGoals, world.EventTriggerer, world.PlayerManager);
 

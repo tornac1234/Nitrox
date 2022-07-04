@@ -18,13 +18,17 @@ namespace NitroxServer.GameLogic.Bases
         [JsonProperty, ProtoMember(3)]
         public StoryTimingData StoryTiming { get; set; }
 
-        public static GameData From(PDAStateData pdaState, StoryGoalData storyGoals, ScheduleKeeper scheduleKeeper, EventTriggerer eventTriggerer)
+        [JsonProperty, ProtoMember(4)]
+        public SunbeamData SunbeamData { get; set; }
+
+        public static GameData From(PDAStateData pdaState, StoryGoalData storyGoals, SunbeamData sunbeamData, ScheduleKeeper scheduleKeeper, EventTriggerer eventTriggerer)
         {
             return new GameData
             {
                 PDAState = pdaState,
                 StoryGoals = StoryGoalData.From(storyGoals, scheduleKeeper),
-                StoryTiming = StoryTimingData.From(eventTriggerer)
+                StoryTiming = StoryTimingData.From(eventTriggerer),
+                SunbeamData = sunbeamData
             };
         }
     }
