@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using NitroxClient.Communication.Abstract;
 using NitroxClient.GameLogic.Simulation;
 using NitroxModel.DataStructures;
@@ -73,6 +73,21 @@ namespace NitroxClient.GameLogic
         public void StopSimulatingEntity(NitroxId id)
         {
             simulatedIdsByLockType.Remove(id);
+        }
+
+        public string GetLockTypeRepresentation(NitroxId id)
+        {
+            if (simulatedIdsByLockType.TryGetValue(id, out SimulationLockType lockType))
+            {
+                switch (lockType)
+                {
+                    case SimulationLockType.EXCLUSIVE:
+                        return "Exclusive";
+                    case SimulationLockType.TRANSIENT:
+                        return "Transient";
+                }
+            }
+            return "None";
         }
     }
 }

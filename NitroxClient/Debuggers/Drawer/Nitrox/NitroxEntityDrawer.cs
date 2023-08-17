@@ -1,6 +1,8 @@
-﻿using System;
+using System;
 using System.Linq;
+using NitroxClient.GameLogic;
 using NitroxClient.MonoBehaviours;
+using NitroxModel.Core;
 using NitroxModel.DataStructures;
 using UnityEngine;
 
@@ -36,6 +38,16 @@ public class NitroxEntityDrawer : IDrawer
             GUILayout.Label("GameObject with IDs", GUILayout.Width(LABEL_WIDTH));
             NitroxGUILayout.Separator();
             GUILayout.TextField(NitroxEntity.GetGameObjects().Count().ToString());
+        }
+        
+        GUILayout.Space(8);
+
+        using (new GUILayout.HorizontalScope())
+        {
+            GUILayout.Label("Simulation lock", GUILayout.Width(LABEL_WIDTH));
+            NitroxGUILayout.Separator();
+            string lockType = NitroxServiceLocator.Cache<SimulationOwnership>.Value.GetLockTypeRepresentation(nitroxEntity.Id);
+            GUILayout.TextField(lockType);
         }
     }
 

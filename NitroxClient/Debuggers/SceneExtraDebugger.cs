@@ -36,6 +36,9 @@ public sealed class SceneExtraDebugger : BaseDebugger
     private int searchPageIndex;
     private int resultsPerPage = 30;
 
+    private string CurrentSearchType => SearchType.Get(searchTypeIndex);
+    private int searchTypeIndex;
+
     public override bool Enabled
     {
         get => base.Enabled;
@@ -49,7 +52,7 @@ public sealed class SceneExtraDebugger : BaseDebugger
         }
     }
 
-    public SceneExtraDebugger(SceneDebugger sceneDebugger, IMap map) : base(350, "Scene Tools", KeyCode.S, true, false, true, GUISkinCreationOptions.DERIVEDCOPY, 700)
+    public SceneExtraDebugger(SceneDebugger sceneDebugger, IMap map) : base(390, "Scene Tools", KeyCode.S, true, false, true, GUISkinCreationOptions.DERIVEDCOPY, 700)
     {
         this.sceneDebugger = sceneDebugger;
         this.map = map;
@@ -73,23 +76,39 @@ public sealed class SceneExtraDebugger : BaseDebugger
 
     private void RenderTabTools()
     {
-        using (new GUILayout.HorizontalScope("box"))
+        using (new GUILayout.VerticalScope("box"))
         {
-            if (GUILayout.Button($"World Marker: {(worldMarkerEnabled ? "Active" : "Inactive")}"))
+            using (new GUILayout.HorizontalScope())
             {
-                worldMarkerEnabled = !worldMarkerEnabled;
+                if (GUILayout.Button($"World Marker: {(worldMarkerEnabled ? "Active" : "Inactive")}"))
+                {
+                    worldMarkerEnabled = !worldMarkerEnabled;
+                }
+
+                if (GUILayout.Button($"Ray Casting: {(rayCastingEnabled ? "Active" : "Inactive")}"))
+                {
+                    Log.InGame($"Ray casting can be enabled/disabled with: {RAY_CAST_KEY}");
+                }
             }
 
-            if (GUILayout.Button($"Ray Casting: {(rayCastingEnabled ? "Active" : "Inactive")}"))
+            using (new GUILayout.HorizontalScope())
             {
-                Log.InGame($"Ray casting can be enabled/disabled with: {RAY_CAST_KEY}");
+                if (GUILayout.Button($"Search type: {CurrentSearchType}"))
+                {
+                    searchTypeIndex++;
+                    if (searchTypeIndex >= SearchType.Count)
+                    {
+                        searchTypeIndex = 0;
+                    }
+                }
             }
         }
 
         GettingRayCastResults();
         GettingSearchbarResults();
 
-        using (new GUILayout.VerticalScope("box", GUILayout.MinHeight(600)))
+        float maxHeight = WindowRect.height - 170; // Arbitrary value which prevents it from overflowing
+        using (new GUILayout.VerticalScope("box", GUILayout.MinHeight(600), GUILayout.MaxHeight(maxHeight)))
         {
             if (gameObjectResults.Count > 0)
             {
@@ -234,28 +253,36 @@ public sealed class SceneExtraDebugger : BaseDebugger
 
             if (string.IsNullOrEmpty(gameObjectSearchPatternInvalidMessage))
             {
-                if (gameObjectSearch.StartsWith("t:"))
+                switch (CurrentSearchType)
                 {
-                    Type type = AppDomain.CurrentDomain.GetAssemblies()
-                                         .Select(a => a.GetType(gameObjectSearch.Substring(2), false, true))
-                                         .FirstOrDefault(t => t != null);
-                    if (type != null)
-                    {
-                        List<GameObject> gameObjects = Resources.FindObjectsOfTypeAll<GameObject>()
-                                                                .Where(g => g.GetComponent(type))
-                                                                .ToList();
-                        gameObjectResults = gameObjects;
-                    }
-                    else
-                    {
-                        GUILayout.Label($"There is no component named \"{gameObjectSearch.Substring(2)}\"", "error");
-                    }
-                }
-                else
-                {
-                    gameObjectResults = Resources.FindObjectsOfTypeAll<GameObject>().
-                                        Where(go => Regex.IsMatch(go.name, gameObjectSearch, RegexOptions.IgnoreCase)).
-                                        OrderBy(go => go.name).ToList();
+                    case SearchType.NAME:
+                        gameObjectResults = Resources.FindObjectsOfTypeAll<GameObject>()
+                                                     .Where(go => Regex.IsMatch(go.name, gameObjectSearch, RegexOptions.IgnoreCase))
+                                                     .OrderBy(go => go.name).ToList();
+                        break;
+
+                    case SearchType.NITROX_ID:
+                        gameObjectResults = NitroxEntity.GetGameObjects()
+                                                        .Where(entry => entry.Key.ToString().Contains(gameObjectSearch))
+                                                        .Select(entry => entry.Value).ToList();
+                        break;
+
+                    case SearchType.COMPONENT_TYPE:
+                        Type type = AppDomain.CurrentDomain.GetAssemblies()
+                                                           .Select(a => a.GetType(gameObjectSearch, false, true))
+                                                           .FirstOrDefault(t => t != null);
+                        if (type != null)
+                        {
+                            List<GameObject> gameObjects = Resources.FindObjectsOfTypeAll<GameObject>()
+                                                                    .Where(g => g.GetComponent(type))
+                                                                    .ToList();
+                            gameObjectResults = gameObjects;
+                        }
+                        else
+                        {
+                            GUILayout.Label($"There is no component named \"{gameObjectSearch.Substring(2)}\"", "error");
+                        }
+                        break;
                 }
 
                 gameObjectSearchCache = gameObjectSearch;
@@ -419,5 +446,20 @@ public sealed class SceneExtraDebugger : BaseDebugger
             s.alignment = TextAnchor.MiddleCenter;
             s.fontStyle = FontStyle.Italic;
         });
+    }
+
+    private static class SearchType
+    {
+        private static readonly List<string> types = new()
+        {
+            NAME, NITROX_ID, COMPONENT_TYPE
+        };
+        public static readonly int Count = types.Count;
+
+        public const string NAME = "by name";
+        public const string NITROX_ID = "by Nitrox Id";
+        public const string COMPONENT_TYPE = "by Unity component type";
+
+        public static string Get(int index) => types[index];
     }
 }
