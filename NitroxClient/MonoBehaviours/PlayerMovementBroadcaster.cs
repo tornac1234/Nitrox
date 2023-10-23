@@ -11,29 +11,24 @@ namespace NitroxClient.MonoBehaviours;
 
 public class PlayerMovementBroadcaster : MonoBehaviour
 {
-    /// <summary>
-    ///     Amount of physics updates to skip for sending location broadcasts.
-    ///     TODO: Allow servers to set this value for clients. With many clients connected to the server, a higher value can be preferred.
-    /// </summary>
-    public const int LOCATION_BROADCAST_TICK_SKIPS = 1;
+    private double lastUpdateTimestamp;
+    private const double UPDATE_INTERVAL = 0.05;
 
     private LocalPlayer localPlayer;
-    private int locationBroadcastSkipThreshold = LOCATION_BROADCAST_TICK_SKIPS;
 
     public void Awake()
     {
         localPlayer = NitroxServiceLocator.LocateService<LocalPlayer>();
+        lastUpdateTimestamp = DayNightCycle.main.timePassed;
     }
 
-    public void FixedUpdate()
+    public void Update()
     {
-        // Throttle location broadcasts to not run on every physics tick.
-        if (locationBroadcastSkipThreshold-- > 0)
+        if (DayNightCycle.main.timePassed - lastUpdateTimestamp < UPDATE_INTERVAL)
         {
             return;
         }
-        // Reset skip threshold.
-        locationBroadcastSkipThreshold = LOCATION_BROADCAST_TICK_SKIPS;
+        lastUpdateTimestamp = DayNightCycle.main.timePassed;
 
         // Freecam does disable main camera control
         // But it's also disabled when driving the cyclops through a cyclops camera (content.activeSelf is only true when controlling through a cyclops camera)

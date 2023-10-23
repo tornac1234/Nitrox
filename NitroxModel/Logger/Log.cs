@@ -152,6 +152,15 @@ namespace NitroxModel.Logger
             logOnceCache.Add(hash);
         }
 
+        public static void ErrorOnce(Exception ex)
+        {
+            int hash = ex?.GetHashCode() ?? 0;
+            if (logOnceCache.Add(hash))
+            {
+                Error(ex);
+            }
+        }
+
         public static void ErrorOnce(string message)
         {
             int hash = message?.GetHashCode() ?? 0;

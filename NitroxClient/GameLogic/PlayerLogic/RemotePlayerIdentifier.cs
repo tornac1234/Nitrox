@@ -1,3 +1,6 @@
+using System;
+using NitroxModel.Packets;
+using NitroxModel_Subnautica.DataStructures;
 using UnityEngine;
 
 namespace NitroxClient.GameLogic.PlayerLogic;
@@ -11,6 +14,31 @@ namespace NitroxClient.GameLogic.PlayerLogic;
 public class RemotePlayerIdentifier : MonoBehaviour, IObstacle
 {
     public RemotePlayer RemotePlayer;
+    private PlayerMovement movementTask => RemotePlayer.MovementTask;
+
+    public void FixedUpdate()
+    {
+        ApplyMovementTask();
+    }
+
+    private void ApplyMovementTask()
+    {
+        if (movementTask != null)
+        {
+            try
+            {
+                RemotePlayer.UpdatePosition(movementTask.Position.ToUnity(),
+                                              movementTask.Velocity.ToUnity(),
+                                              movementTask.BodyRotation.ToUnity(),
+                                              movementTask.AimingRotation.ToUnity());
+            }
+            catch (Exception exception)
+            {
+                Log.ErrorOnce(exception);
+            }
+            RemotePlayer.MovementTask = null;
+        }
+    }
 
     public bool IsDeconstructionObstacle() => true;
 

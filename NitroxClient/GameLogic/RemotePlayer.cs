@@ -1,12 +1,12 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Linq;
 using NitroxClient.GameLogic.PlayerLogic;
 using NitroxClient.GameLogic.PlayerLogic.PlayerModel;
 using NitroxClient.GameLogic.PlayerLogic.PlayerModel.Abstract;
 using NitroxClient.MonoBehaviours;
 using NitroxClient.Unity.Helper;
 using NitroxModel.MultiplayerSession;
+using NitroxModel.Packets;
 using UnityEngine;
 using UWE;
 using Object = UnityEngine.Object;
@@ -41,6 +41,8 @@ namespace NitroxClient.GameLogic
         public readonly Event<RemotePlayer> PlayerDeathEvent = new();
 
         public readonly Event<RemotePlayer> PlayerDisconnectEvent = new();
+
+        public PlayerMovement MovementTask;
 
         public RemotePlayer(PlayerContext playerContext, PlayerModelManager modelManager)
         {
@@ -117,8 +119,8 @@ namespace NitroxClient.GameLogic
                 bodyRotation = vehicleAngle * bodyRotation;
                 aimingRotation = vehicleAngle * aimingRotation;
             }
-            RigidBody.velocity = AnimationController.Velocity = MovementHelper.GetCorrectedVelocity(position, velocity, Body, Time.fixedDeltaTime * (PlayerMovementBroadcaster.LOCATION_BROADCAST_TICK_SKIPS + 1));
-            RigidBody.angularVelocity = MovementHelper.GetCorrectedAngularVelocity(bodyRotation, Vector3.zero, Body, Time.fixedDeltaTime * (PlayerMovementBroadcaster.LOCATION_BROADCAST_TICK_SKIPS + 1));
+            RigidBody.velocity = AnimationController.Velocity = MovementHelper.GetCorrectedVelocity(position, velocity, Body, Time.fixedDeltaTime);
+            RigidBody.angularVelocity = MovementHelper.GetCorrectedAngularVelocity(bodyRotation, Vector3.zero, Body, Time.fixedDeltaTime);
 
             AnimationController.AimingRotation = aimingRotation;
             AnimationController.UpdatePlayerAnimations = true;

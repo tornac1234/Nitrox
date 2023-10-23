@@ -41,21 +41,22 @@ public class CyclopsMetadataProcessor : GenericEntityMetadataProcessor<CyclopsMe
             return;
         }
 
-        if (Player.main.currentSub != engineState.subRoot)
+        if (Player.main.currentSub == engineState.subRoot)
         {
-            engineState.startEngine = !isOn;
-            engineState.invalidButton = true;
-            engineState.Invoke(nameof(CyclopsEngineChangeState.ResetInvalidButton), 2.5f);
-            engineState.subRoot.BroadcastMessage("InvokeChangeEngineState", !isOn, SendMessageOptions.RequireReceiver);
-        }
-        else
-        {
+            // Force invalidButton state to ensure the function runs
             engineState.invalidButton = false;
             using (PacketSuppressor<EntityMetadataUpdate>.Suppress())
             {
                 engineState.OnClick();
             }
-        }        
+            return;
+        }
+
+        // Code adapted from CyclopsEngineChangeState.OnClick()
+        engineState.startEngine = isOn;
+        engineState.subRoot.BroadcastMessage("InvokeChangeEngineState", isOn, SendMessageOptions.RequireReceiver);
+        engineState.invalidButton = true;
+        engineState.Invoke("ResetInvalidButton", 2.5f);
     }
 
     private void SetEngineMode(GameObject cyclops, CyclopsMotorMode.CyclopsMotorModes mode)
@@ -63,7 +64,7 @@ public class CyclopsMetadataProcessor : GenericEntityMetadataProcessor<CyclopsMe
         foreach (CyclopsMotorModeButton button in cyclops.GetComponentsInChildren<CyclopsMotorModeButton>(true))
         {
             // At initial sync, this kind of processor is executed before the Start()
-            if (button.subRoot == null)
+            if (!button.subRoot)
             {
                 button.Start();
             }

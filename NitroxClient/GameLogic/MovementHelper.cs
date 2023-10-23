@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 namespace NitroxClient.GameLogic
 {
@@ -49,6 +49,7 @@ namespace NitroxClient.GameLogic
             return remoteVelocity;
         }
 
+        // Adapted from https://gamedev.stackexchange.com/questions/147409/rotate-from-current-rotation-to-another-using-angular-velocity
         public static Vector3 GetCorrectedAngularVelocity(Quaternion remoteRotation, Vector3 angularVelocty, GameObject gameObject, float correctionTime)
         {
             Quaternion delta = remoteRotation * gameObject.transform.rotation.GetInverse();
@@ -66,10 +67,10 @@ namespace NitroxClient.GameLogic
                 angle -= 360f;
             }
 
-            // Here I drop down to 0.9f times the desired movement,
+            // Here I drop down to 0.95f times the desired movement,
             // since we'd rather undershoot and ease into the correct angle
             // than overshoot and oscillate around it in the event of errors.
-            return (.9f * Mathf.Deg2Rad * angle / correctionTime) * axis + angularVelocty;
+            return (0.95f * Mathf.Deg2Rad * angle / correctionTime) * axis + angularVelocty;
         }
     }
 }

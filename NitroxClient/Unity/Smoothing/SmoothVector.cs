@@ -1,10 +1,10 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 namespace NitroxClient.Unity.Smoothing
 {
     public class SmoothVector
     {
-        private const float SMOOTHING_SPEED = 10f;
+        private const float SMOOTHING_SPEED = 20f;
         public Vector3 Target { get; set; }
         public Vector3 Current { get; set; }
 
