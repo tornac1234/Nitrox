@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -5,30 +6,31 @@ namespace NitroxClient.MonoBehaviours;
 
 public class NitroxCinematicCamera : MonoBehaviour
 {
-    private readonly List<KeyPoint> keyPoints = [];
-
-    private bool isRecording = false;
-    private float recordingStartTime;
-
-    private bool isPlaying = false;
-    private float playingStartTime;
-    private int currentPointIndex = 0;
-
+    public static NitroxCinematicCamera? Instance { get; private set; }
     public float PlaybackSpeed = 1f;
-    public float ColdstartDuration = 5f;
+    public float ColdStartDuration = 5f;
 
-    private Transform playerTransform;
-    private Transform cameraTransform;
+    public readonly List<KeyPoint> KeyPoints = [];
 
-    public void Awake()
+    public bool IsRecording { get; private set; }
+    public bool IsPlaying { get; private set; }
+
+    private float recordingStartTime;
+    private float playingStartTime;
+    private int currentPointIndex;
+
+    private readonly Lazy<Transform> playerTransform = new(() => Player.mainObject.transform);
+    private readonly Lazy<Transform> cameraTransform = new(() => MainCamera.camera.transform);
+
+    private void Awake()
     {
-        playerTransform = Player.mainObject.transform;
-        cameraTransform = MainCamera.camera.transform;
+        Instance = this;
+        enabled = false;
     }
 
-    private void Update()
+    public void Update()
     {
-        if (isPlaying)
+        if (IsPlaying)
         {
             PlayCinematic();
             return;
@@ -40,7 +42,7 @@ public class NitroxCinematicCamera : MonoBehaviour
         }
         if (Input.GetKeyUp(KeyCode.M))
         {
-            if (isRecording)
+            if (IsRecording)
             {
                 StopRecording();
             }
@@ -51,7 +53,7 @@ public class NitroxCinematicCamera : MonoBehaviour
         }
         if (Input.GetKeyUp(KeyCode.O))
         {
-            if (isPlaying)
+            if (IsPlaying)
             {
                 StopPlayback();
             }
@@ -64,55 +66,55 @@ public class NitroxCinematicCamera : MonoBehaviour
 
     public void StartRecording()
     {
-        keyPoints.Clear();
-        isRecording = true;
+        KeyPoints.Clear();
+        IsRecording = true;
         recordingStartTime = Time.time;
         Log.InGame("Recording started");
     }
 
     public void AddKeyPoint()
     {
-        if (!isRecording)
+        if (!IsRecording)
         {
             return;
         }
 
         float t = Time.time - recordingStartTime;
-        keyPoints.Add(new KeyPoint(t, playerTransform.position, cameraTransform.rotation));
+        KeyPoints.Add(new KeyPoint(t, playerTransform.Value.position, cameraTransform.Value.rotation));
         Log.InGame($"Key point added at {t:F2}s");
-        Log.Debug($"Key point added at {t:F2}s, pos={playerTransform.position}");
+        Log.Debug($"Key point added at {t:F2}s, pos={playerTransform.Value.position}");
     }
 
     public void StopRecording()
     {
-        if (!isRecording)
+        if (!IsRecording)
         {
             return;
         }
-        isRecording = false;
+        IsRecording = false;
 
         // Fix hemisphere alignment for all quaternions
-        for (int i = 1; i < keyPoints.Count; i++)
+        for (int i = 1; i < KeyPoints.Count; i++)
         {
-            keyPoints[i].Rotation = EnsureSameHemisphere(keyPoints[i - 1].Rotation, keyPoints[i].Rotation);
+            KeyPoints[i].Rotation = EnsureSameHemisphere(KeyPoints[i - 1].Rotation, KeyPoints[i].Rotation);
         }
 
         // Detect 180° flips and insert intermediate keyframes
-        for (int i = 0; i < keyPoints.Count - 1; i++)
+        for (int i = 0; i < KeyPoints.Count - 1; i++)
         {
-            Quaternion a = keyPoints[i].Rotation;
-            Quaternion b = keyPoints[i + 1].Rotation;
+            Quaternion a = KeyPoints[i].Rotation;
+            Quaternion b = KeyPoints[i + 1].Rotation;
 
             float dot = Mathf.Abs(Quaternion.Dot(a, b));
             if (dot < 0.05f) // ~177° apart
             {
                 // Insert intermediate Rotation halfway in Time
-                float midTime = (keyPoints[i].Time + keyPoints[i + 1].Time) * 0.5f;
-                Vector3 midPos = (keyPoints[i].Position + keyPoints[i + 1].Position) * 0.5f;
+                float midTime = (KeyPoints[i].Time + KeyPoints[i + 1].Time) * 0.5f;
+                Vector3 midPos = (KeyPoints[i].Position + KeyPoints[i + 1].Position) * 0.5f;
                 Quaternion midRot = Quaternion.Slerp(a, b, 0.5f);
 
-                KeyPoint midPoint = new(midTime, midPos, midRot);
-                keyPoints.Insert(i + 1, midPoint);
+                KeyPoint midPoint = new(midTime, midPos, midRot, true);
+                KeyPoints.Insert(i + 1, midPoint);
 
                 i++; // Skip past the inserted keyframe
             }
@@ -120,31 +122,31 @@ public class NitroxCinematicCamera : MonoBehaviour
 
         // Add a coldstart long enough to load the zone around first point
 
-        KeyPoint firstPoint = keyPoints[0];
+        KeyPoint firstPoint = KeyPoints[0];
         float startTime = firstPoint.Time;
 
-        foreach (KeyPoint keyPoint in keyPoints)
+        foreach (KeyPoint keyPoint in KeyPoints)
         {
-            keyPoint.Time += ColdstartDuration;
+            keyPoint.Time += ColdStartDuration;
         }
 
-        KeyPoint newStartKeypoint = new(startTime, firstPoint.Position, firstPoint.Rotation);
-        keyPoints.Insert(0, newStartKeypoint);
+        KeyPoint newStartKeypoint = new(startTime, firstPoint.Position, firstPoint.Rotation, true);
+        KeyPoints.Insert(0, newStartKeypoint);
 
-        Log.Debug($"Recording stopped, total points: {keyPoints.Count}");
-        Log.InGame($"Recording stopped, total points: {keyPoints.Count}");
+        Log.Debug($"Recording stopped, total points: {KeyPoints.Count}");
+        Log.InGame($"Recording stopped, total points: {KeyPoints.Count}");
     }
 
     public void StartPlayback()
     {
-        if (keyPoints.Count < 2)
+        if (KeyPoints.Count < 2)
         {
             Log.Warn("Not enough key points to play cinematic.");
             return;
         }
 
         Player.main.cinematicModeActive = true;
-        isPlaying = true;
+        IsPlaying = true;
         playingStartTime = Time.time;
         currentPointIndex = 0;
         Log.Debug("Playback started");
@@ -152,15 +154,15 @@ public class NitroxCinematicCamera : MonoBehaviour
 
     public void StopPlayback()
     {
-        isPlaying = false;
+        IsPlaying = false;
         Player.main.cinematicModeActive = false;
-        cameraTransform.localRotation = Quaternion.identity;
+        cameraTransform.Value.localRotation = Quaternion.identity;
         Log.Debug("Playback stopped");
     }
 
     private void PlayCinematic()
     {
-        if (currentPointIndex >= keyPoints.Count - 1)
+        if (currentPointIndex >= KeyPoints.Count - 1)
         {
             StopPlayback();
             return;
@@ -168,8 +170,8 @@ public class NitroxCinematicCamera : MonoBehaviour
 
         float elapsed = (Time.time - playingStartTime) * PlaybackSpeed;
 
-        KeyPoint start = keyPoints[currentPointIndex];
-        KeyPoint end = keyPoints[currentPointIndex + 1];
+        KeyPoint start = KeyPoints[currentPointIndex];
+        KeyPoint end = KeyPoints[currentPointIndex + 1];
 
         float segmentDuration = end.Time - start.Time;
         if (segmentDuration <= 0.001f)
@@ -182,11 +184,11 @@ public class NitroxCinematicCamera : MonoBehaviour
 
         // Smooth curve interpolation
         Vector3 pos = GetCatmullRomPosition(currentPointIndex, t);
-        playerTransform.position = pos;
+        playerTransform.Value.position = pos;
 
         // Smooth quaternion interpolation
         Quaternion rot = GetSquadRotation(currentPointIndex, t);
-        playerTransform.rotation = rot;
+        playerTransform.Value.rotation = rot;
 
         if (segmentElapsed >= segmentDuration)
         {
@@ -196,25 +198,25 @@ public class NitroxCinematicCamera : MonoBehaviour
 
     private Vector3 GetCatmullRomPosition(int index, float t)
     {
-        Vector3 p0 = keyPoints[Mathf.Max(index - 1, 0)].Position;
-        Vector3 p1 = keyPoints[index].Position;
-        Vector3 p2 = keyPoints[Mathf.Min(index + 1, keyPoints.Count - 1)].Position;
-        Vector3 p3 = keyPoints[Mathf.Min(index + 2, keyPoints.Count - 1)].Position;
+        Vector3 p0 = KeyPoints[Mathf.Max(index - 1, 0)].Position;
+        Vector3 p1 = KeyPoints[index].Position;
+        Vector3 p2 = KeyPoints[Mathf.Min(index + 1, KeyPoints.Count - 1)].Position;
+        Vector3 p3 = KeyPoints[Mathf.Min(index + 2, KeyPoints.Count - 1)].Position;
 
         return 0.5f * (
             (2f * p1) +
             (-p0 + p2) * t +
-            (2f * p0 - 5f * p1 + 4f * p2 - p3) * t * t +
-            (-p0 + 3f * p1 - 3f * p2 + p3) * t * t * t
+            (2f * p0 - 5f * p1 + 4f * p2 - p3) * (t * t) +
+            (-p0 + 3f * p1 - 3f * p2 + p3) * (t * t * t)
         );
     }
 
     private Quaternion GetSquadRotation(int index, float t)
     {
-        Quaternion q0 = keyPoints[Mathf.Max(index - 1, 0)].Rotation;
-        Quaternion q1 = keyPoints[index].Rotation;
-        Quaternion q2 = keyPoints[Mathf.Min(index + 1, keyPoints.Count - 1)].Rotation;
-        Quaternion q3 = keyPoints[Mathf.Min(index + 2, keyPoints.Count - 1)].Rotation;
+        Quaternion q0 = KeyPoints[Mathf.Max(index - 1, 0)].Rotation;
+        Quaternion q1 = KeyPoints[index].Rotation;
+        Quaternion q2 = KeyPoints[Mathf.Min(index + 1, KeyPoints.Count - 1)].Rotation;
+        Quaternion q3 = KeyPoints[Mathf.Min(index + 2, KeyPoints.Count - 1)].Rotation;
 
         // Ensure hemisphere consistency
         q0 = EnsureSameHemisphere(q1, q0);
@@ -278,8 +280,7 @@ public class NitroxCinematicCamera : MonoBehaviour
         float a = v.magnitude;
         float sina = Mathf.Sin(a);
 
-        Quaternion result = new Quaternion();
-        result.w = Mathf.Cos(a);
+        Quaternion result = new() { w = Mathf.Cos(a) };
 
         if (Mathf.Abs(a) > 0.0001f)
         {
@@ -306,18 +307,20 @@ public class NitroxCinematicCamera : MonoBehaviour
         return q2;
     }
 
-    [System.Serializable]
+    [Serializable]
     public class KeyPoint
     {
         public float Time;
         public Vector3 Position;
         public Quaternion Rotation;
+        public bool IsGenerated;
 
-        public KeyPoint(float Time, Vector3 Position, Quaternion Rotation)
+        public KeyPoint(float time, Vector3 position, Quaternion rotation, bool isGenerated = false)
         {
-            Time = Time;
-            Position = Position;
-            Rotation = Rotation;
+            Time = time;
+            Position = position;
+            Rotation = rotation;
+            IsGenerated = isGenerated;
         }
     }
 }
