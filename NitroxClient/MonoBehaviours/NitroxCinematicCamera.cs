@@ -4,6 +4,7 @@ using UnityEngine;
 
 namespace NitroxClient.MonoBehaviours;
 
+[RequireComponent(typeof(LineRenderer))]
 public class NitroxCinematicCamera : MonoBehaviour
 {
     public static NitroxCinematicCamera? Instance { get; private set; }
@@ -18,7 +19,7 @@ public class NitroxCinematicCamera : MonoBehaviour
     private float recordingStartTime;
     private float playingStartTime;
     private int currentPointIndex;
-
+    private LineRenderer lineRenderer;
     private readonly Lazy<Transform> playerTransform = new(() => Player.mainObject.transform);
     private readonly Lazy<Transform> cameraTransform = new(() => MainCamera.camera.transform);
 
@@ -26,6 +27,8 @@ public class NitroxCinematicCamera : MonoBehaviour
     {
         Instance = this;
         enabled = false;
+        lineRenderer = gameObject.GetComponent<LineRenderer>();
+        lineRenderer.enabled = false;
     }
 
     public void Update()
@@ -135,6 +138,34 @@ public class NitroxCinematicCamera : MonoBehaviour
 
         Log.Debug($"Recording stopped, total points: {KeyPoints.Count}");
         Log.InGame($"Recording stopped, total points: {KeyPoints.Count}");
+        RefreshDebugLines();
+    }
+
+    public bool ShowDebugLine
+    {
+        get => lineRenderer.enabled;
+        set => lineRenderer.enabled = value;
+    }
+
+    public void RefreshDebugLines()
+    {
+        lineRenderer.material = new Material(Shader.Find("Sprites/Default"));
+        lineRenderer.startColor = Color.red;
+        lineRenderer.endColor = Color.green;
+        lineRenderer.startWidth = 0.2f;
+        lineRenderer.endWidth = 0.2f;
+        lineRenderer.positionCount = KeyPoints.Count * 3;
+        lineRenderer.useWorldSpace = true;
+
+        for (int index = 0; index < KeyPoints.Count; index++)
+        {
+            KeyPoint keyPoint = KeyPoints[index];
+
+            int lineNumber = index * 3;
+            lineRenderer.SetPosition(lineNumber, keyPoint.Position);
+            lineRenderer.SetPosition(lineNumber + 1, keyPoint.Position + keyPoint.Rotation * Vector3.forward);
+            lineRenderer.SetPosition(lineNumber + 2, keyPoint.Position);
+        }
     }
 
     public void StartPlayback()

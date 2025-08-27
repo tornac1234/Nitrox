@@ -66,11 +66,9 @@ public class CinematicCameraDebugger : BaseDebugger
                     {
                         NitroxCinematicCamera.Instance.StopPlayback();
                     }
-
                 }
                 else
                 {
-
                     if (GUILayout.Button("Start Recording"))
                     {
                         NitroxCinematicCamera.Instance.StartRecording();
@@ -143,6 +141,20 @@ public class CinematicCameraDebugger : BaseDebugger
                 if (GUILayout.Button("Toggle", GUILayout.Width(NitroxGUILayout.DEFAULT_LABEL_WIDTH)))
                 {
                     NitroxCinematicCamera.Instance.enabled = !NitroxCinematicCamera.Instance.enabled;
+                }
+            }
+
+            using (new GUILayout.HorizontalScope())
+            {
+                GUILayout.Label($"Show keypoints in world: {NitroxCinematicCamera.Instance.ShowDebugLine}", NitroxGUILayout.DrawerLabel, GUILayout.Width(NitroxGUILayout.DEFAULT_LABEL_WIDTH));
+                NitroxGUILayout.Separator();
+                if (GUILayout.Button("Toggle", GUILayout.Width(NitroxGUILayout.DEFAULT_LABEL_WIDTH)))
+                {
+                    NitroxCinematicCamera.Instance.ShowDebugLine = !NitroxCinematicCamera.Instance.ShowDebugLine;
+                }
+                if (GUILayout.Button("Refresh", GUILayout.Width(NitroxGUILayout.DEFAULT_LABEL_WIDTH)))
+                {
+                    NitroxCinematicCamera.Instance.RefreshDebugLines();
                 }
             }
 
