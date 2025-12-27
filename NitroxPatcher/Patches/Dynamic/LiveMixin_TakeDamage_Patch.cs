@@ -1,12 +1,11 @@
 using System.Reflection;
+using Nitrox.Model.DataStructures;
+using Nitrox.Model.Subnautica.DataStructures.GameLogic.Entities.Metadata;
+using Nitrox.Model.Subnautica.Packets;
 using NitroxClient.Communication.Abstract;
 using NitroxClient.GameLogic;
 using NitroxClient.GameLogic.PlayerLogic;
 using NitroxClient.GameLogic.Spawning.Metadata;
-using Nitrox.Model.DataStructures;
-using Nitrox.Model.Packets;
-using Nitrox.Model.Subnautica.DataStructures.GameLogic.Entities.Metadata;
-using Nitrox.Model.Subnautica.Packets;
 using UnityEngine;
 
 namespace NitroxPatcher.Patches.Dynamic;
@@ -20,12 +19,7 @@ public sealed partial class LiveMixin_TakeDamage_Patch : NitroxPatch, IDynamicPa
         // Persist the previous health value
         __state = __instance.health;
 
-        if (!Resolve<LiveMixinManager>().IsWhitelistedUpdateType(__instance))
-        {
-            return true; // everyone should process this locally
-        }
-
-        return Resolve<LiveMixinManager>().ShouldApplyNextHealthUpdate(__instance, dealer);
+        return Resolve<LiveMixinManager>().ShouldTakeDamage(__instance, dealer);
     }
 
     public static void Postfix(float __state, LiveMixin __instance, float originalDamage, GameObject dealer, bool __runOriginal)

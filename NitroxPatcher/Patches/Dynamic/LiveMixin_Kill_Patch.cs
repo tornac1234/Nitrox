@@ -1,10 +1,9 @@
 using System.Reflection;
+using Nitrox.Model.DataStructures;
+using Nitrox.Model.Subnautica.Packets;
 using NitroxClient.Communication.Abstract;
 using NitroxClient.GameLogic;
 using NitroxClient.MonoBehaviours;
-using Nitrox.Model.DataStructures;
-using Nitrox.Model.Packets;
-using Nitrox.Model.Subnautica.Packets;
 
 namespace NitroxPatcher.Patches.Dynamic;
 
@@ -22,7 +21,7 @@ public sealed partial class LiveMixin_Kill_Patch : NitroxPatch, IDynamicPatch
         // We don't broadcast if we don't have objectId or if the object is whitelisted,
         // in which case kill broadcast is managed differently
         if (!__instance.TryGetNitroxId(out NitroxId objectId) ||
-            Resolve<LiveMixinManager>().IsWhitelistedUpdateType(__instance))
+            Resolve<LiveMixinManager>().IsVehicleOrCyclops(__instance))
         {
             return;
         }

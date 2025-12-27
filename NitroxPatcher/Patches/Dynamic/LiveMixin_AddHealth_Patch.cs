@@ -1,12 +1,11 @@
 using System.Reflection;
+using Nitrox.Model.DataStructures;
+using Nitrox.Model.Subnautica.DataStructures.GameLogic.Entities.Metadata;
+using Nitrox.Model.Subnautica.Packets;
 using NitroxClient.Communication.Abstract;
 using NitroxClient.GameLogic;
 using NitroxClient.GameLogic.Spawning.Metadata;
 using NitroxClient.MonoBehaviours;
-using Nitrox.Model.DataStructures;
-using Nitrox.Model.Packets;
-using Nitrox.Model.Subnautica.DataStructures.GameLogic.Entities.Metadata;
-using Nitrox.Model.Subnautica.Packets;
 using UnityEngine;
 
 namespace NitroxPatcher.Patches.Dynamic;
@@ -25,12 +24,7 @@ public sealed partial class LiveMixin_AddHealth_Patch : NitroxPatch, IDynamicPat
         // Persist the previous health value
         __state = __instance.health;
 
-        if (!Resolve<LiveMixinManager>().IsWhitelistedUpdateType(__instance))
-        {
-            return true; // everyone should process this locally
-        }
-
-        return Resolve<LiveMixinManager>().ShouldApplyNextHealthUpdate(__instance);
+        return Resolve<LiveMixinManager>().ShouldAddHealth(__instance);
     }
 
     public static void Postfix(float __state, LiveMixin __instance, bool __runOriginal)

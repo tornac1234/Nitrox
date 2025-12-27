@@ -20,57 +20,81 @@ public class LiveMixinManager
         this.simulationOwnership = simulationOwnership;
     }
 
-    // Currently, we only apply live mixin updates to vehicles as there is more work to implement
-    // damage for regular entities like fish.
-    public bool IsWhitelistedUpdateType(LiveMixin entity)
+    public bool IsVehicleOrCyclops(GameObject gameObject)
     {
-        Vehicle vehicle = entity.GetComponent<Vehicle>();
-        SubRoot subRoot = entity.GetComponent<SubRoot>();
+        if (gameObject.GetComponent<Vehicle>())
+        {
+            return true;
+        }
 
-        return (vehicle || (subRoot && subRoot.isCyclops));
+        return gameObject.TryGetComponent(out SubRoot subRoot) && subRoot.isCyclops;
+    }
+
+    public bool IsVehicleOrCyclops(Component component)
+    {
+        return IsVehicleOrCyclops(component.gameObject);
+    }
+
+    public bool ShouldAddHealth(LiveMixin liveMixin)
+    {
+        if (IsRemoteHealthChanging)
+        {
+            return true;
+        }
+
+        // Currently, we only apply live mixin updates to vehicles as there is more work to implement
+        // damage for regular entities like fish.
+        if (!IsVehicleOrCyclops(liveMixin))
+        {
+            return true;
+        }
+
+        // As a general rule, for unexpected objects (no NitroxId) we don't block anything to avoid any impact on the user experience
+        if (!liveMixin.TryGetNitroxId(out NitroxId nitroxId))
+        {
+            return true;
+        }
+
+        return simulationOwnership.HasAnyLockType(nitroxId);
     }
     
+    public bool ShouldTakeDamage(LiveMixin victimLiveMixin, GameObject dealer)
+    {
+        if (IsRemoteHealthChanging)
+        {
+            return true;
+        }
+
+        // Same reason as in ShouldAddHealth
+        if (!IsVehicleOrCyclops(victimLiveMixin))
+        {
+            return true;
+        }
+
+        // When there's a damage dealer, the only priority is to check simulation ownership on it
+        if (dealer)
+        {
+            if (!dealer.TryGetIdOrWarn(out NitroxId dealerId))
+            {
+                return true;
+            }
+
+            return simulationOwnership.HasAnyLockType(dealerId);
+        }
+
+        if (!victimLiveMixin.TryGetIdOrWarn(out NitroxId id))
+        {
+            return true;
+        }
+
+        return simulationOwnership.HasAnyLockType(id);
+    }
+
     public bool ShouldBroadcastDeath(LiveMixin liveMixin)
     {
         if (liveMixin.TryGetComponent(out UniqueIdentifier uniqueIdentifier) && !string.IsNullOrEmpty(uniqueIdentifier.classId))
         {
             return broadcastDeathClassIdWhitelist.Contains(uniqueIdentifier.classId);
-        }
-        
-        return true;
-    }
-
-    public bool ShouldApplyNextHealthUpdate(LiveMixin receiver, GameObject dealer = null)
-    {
-        if (!receiver.TryGetNitroxId(out NitroxId id))
-        {
-            return false;
-        }
-
-        if (!simulationOwnership.HasAnyLockType(id) && !IsRemoteHealthChanging)
-        {
-            return false;
-        }
-
-
-        // Check to see if this health change is caused by docked vehicle collisions.  If so, we don't want to apply it.
-        if (!dealer)
-        {
-            return true;
-        }
-
-        Vehicle dealerVehicle = dealer.GetComponent<Vehicle>();
-        VehicleDockingBay vehicleDockingBay = receiver.GetComponentInChildren<VehicleDockingBay>();
-
-        if (vehicleDockingBay && dealerVehicle)
-        {
-            if (vehicleDockingBay.GetDockedVehicle() == dealerVehicle ||
-                vehicleDockingBay.interpolatingVehicle == dealerVehicle ||
-                vehicleDockingBay.nearbyVehicle == dealerVehicle)
-            {
-                Log.Debug($"Dealer {dealer} is vehicle and currently docked or nearby {receiver}, do not harm it!");
-                return false;
-            }
         }
 
         return true;
@@ -100,7 +124,7 @@ public class LiveMixinManager
             }
         } catch (Exception e)
         {
-            Log.Error(e, $"Encountered an expcetion while processing health update");
+            Log.Error(e, $"Encountered an exception while processing health update");
         }
 
         IsRemoteHealthChanging = false;
