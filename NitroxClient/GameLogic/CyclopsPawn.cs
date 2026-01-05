@@ -65,7 +65,7 @@ public class CyclopsPawn
         Handle.name = name;
         Handle.transform.parent = virtualTransform;
         Handle.transform.localPosition = localPosition;
-        GameObject.DestroyImmediate(Handle.GetComponent<Collider>());
+        GameObject.Destroy(Handle.GetComponent<Collider>());
 
         Controller = Handle.AddComponent<CharacterController>();
         Controller.height = playerController.standheight - playerController.cameraOffset;

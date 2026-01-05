@@ -100,7 +100,7 @@ public class LiveMixinManager
         return true;
     }
 
-    public void SyncRemoteHealth(LiveMixin liveMixin, float remoteHealth, Vector3 position = default, DamageType damageType = DamageType.Normal)
+    public void SyncRemoteHealth(LiveMixin liveMixin, float remoteHealth, Vector3 position = default, DamageType damageType = DamageType.Normal, GameObject dealer = null)
     {
         if (liveMixin.health == remoteHealth)
         {
@@ -116,7 +116,7 @@ public class LiveMixinManager
         {
             if (difference < 0)
             {
-                liveMixin.TakeDamage(difference, position, damageType);
+                liveMixin.TakeDamage(difference, position, damageType, dealer);
             }
             else
             {

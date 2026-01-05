@@ -484,6 +484,11 @@ public class WorldPersistenceTest
                 Assert.AreEqual(baseLeakEntity.Health, baseLeakEntityAfter.Health);
                 Assert.AreEqual(baseLeakEntity.RelativeCell, baseLeakEntityAfter.RelativeCell);
                 break;
+            case CyclopsDamagePointEntity cyclopsDamagePointEntity when entityAfter is CyclopsDamagePointEntity cyclopsDamagePointEntityAfter:
+                Assert.AreEqual(cyclopsDamagePointEntity.Health, cyclopsDamagePointEntityAfter.Health);
+                Assert.AreEqual(cyclopsDamagePointEntity.DamagePointIndex, cyclopsDamagePointEntityAfter.DamagePointIndex);
+                Assert.AreEqual(cyclopsDamagePointEntity.FXPrefabIndex, cyclopsDamagePointEntityAfter.FXPrefabIndex);
+                break;
             default:
                 Assert.Fail($"Runtime type of {nameof(Entity)} is not equal: {entity.GetType().Name} - {entityAfter.GetType().Name}");
                 break;

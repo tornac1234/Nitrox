@@ -45,6 +45,12 @@ public sealed partial class LiveMixin_AddHealth_Patch : NitroxPatch, IDynamicPat
                 case BaseCell baseCell:
                     HandleBaseLeakRepair(baseCell, __instance);
                     return;
+                case CyclopsDamagePoint cyclopsDamagePoint:
+                    HandleCyclopsDamagePoint(cyclopsDamagePoint, __instance);
+                    return;
+                case SubRoot subRoot when subRoot.isCyclops:
+                    HandleCyclopsHeal(__instance);
+                    return;
             }
         }
         // If the foreach ends, it'll mean that none of those components will have been detected so we just execute the generic case
@@ -81,6 +87,31 @@ public sealed partial class LiveMixin_AddHealth_Patch : NitroxPatch, IDynamicPat
         else if (liveMixin.TryGetComponentInParent(out BaseHullStrength baseHullStrength, true))
         {
             BaseHullStrength_CrushDamageUpdate_Patch.BroadcastChange(baseHullStrength, liveMixin);
+        }
+    }
+
+    private static void HandleCyclopsDamagePoint(CyclopsDamagePoint cyclopsDamagePoint, LiveMixin liveMixin)
+    {
+        if (!cyclopsDamagePoint.TryGetIdOrWarn(out NitroxId damagePointId))
+        {
+            return;
+        }
+
+        CyclopsDamagePointRepairing cyclopsDamagePointRepairing = new(damagePointId, liveMixin.health);
+        Resolve<IPacketSender>().Send(cyclopsDamagePointRepairing);
+
+        if (liveMixin.IsFullHealth())
+        {
+            NitroxEntity.RemoveFrom(cyclopsDamagePoint.gameObject);
+        }
+    }
+
+    private static void HandleCyclopsHeal(LiveMixin liveMixin)
+    {
+        if (liveMixin.TryGetNitroxId(out NitroxId cyclopsId) && Resolve<SimulationOwnership>().HasAnyLockType(cyclopsId))
+        {
+            CyclopsHealed cyclopsHealed = new(cyclopsId, liveMixin.health);
+            Resolve<IPacketSender>().Send(cyclopsHealed);
         }
     }
 

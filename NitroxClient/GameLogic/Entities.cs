@@ -66,6 +66,7 @@ namespace NitroxClient.GameLogic
             entitySpawnersByType[typeof(SerializedWorldEntity)] = entitySpawnersByType[typeof(WorldEntity)];
             entitySpawnersByType[typeof(GlobalRootEntity)] = new GlobalRootEntitySpawner();
             entitySpawnersByType[typeof(BaseLeakEntity)] = new BaseLeakEntitySpawner(liveMixinManager);
+            entitySpawnersByType[typeof(CyclopsDamagePointEntity)] = new CyclopsDamagePointEntitySpawner();
             entitySpawnersByType[typeof(BuildEntity)] = new BuildEntitySpawner(this, (BaseLeakEntitySpawner)entitySpawnersByType[typeof(BaseLeakEntity)]);
             entitySpawnersByType[typeof(RadiationLeakEntity)] = new RadiationLeakEntitySpawner(timeManager);
             entitySpawnersByType[typeof(ModuleEntity)] = new ModuleEntitySpawner(this);

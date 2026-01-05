@@ -6,6 +6,7 @@ using NitroxClient.Communication.Abstract;
 using NitroxClient.GameLogic;
 using NitroxClient.GameLogic.PlayerLogic;
 using NitroxClient.GameLogic.Spawning.Metadata;
+using NitroxClient.MonoBehaviours;
 using UnityEngine;
 
 namespace NitroxPatcher.Patches.Dynamic;
@@ -22,7 +23,7 @@ public sealed partial class LiveMixin_TakeDamage_Patch : NitroxPatch, IDynamicPa
         return Resolve<LiveMixinManager>().ShouldTakeDamage(__instance, dealer);
     }
 
-    public static void Postfix(float __state, LiveMixin __instance, float originalDamage, GameObject dealer, bool __runOriginal)
+    public static void Postfix(float __state, LiveMixin __instance, float originalDamage, Vector3 position, DamageType type, GameObject dealer, bool __runOriginal)
     {
         if (!__runOriginal)
         {
@@ -43,6 +44,11 @@ public sealed partial class LiveMixin_TakeDamage_Patch : NitroxPatch, IDynamicPa
 
         // At this point, if the victim didn't take damage, there's no point in broadcasting it
         if (__state == __instance.health)
+        {
+            return;
+        }
+
+        if (HandleCyclopsDamage(__instance, position, type, dealer))
         {
             return;
         }
@@ -78,6 +84,25 @@ public sealed partial class LiveMixin_TakeDamage_Patch : NitroxPatch, IDynamicPa
         }
 
         Resolve<IPacketSender>().Send(new PvPAttack(remotePlayerIdentifier.RemotePlayer.PlayerId, damage, attackType));
+        return true;
+    }
+
+    private static bool HandleCyclopsDamage(LiveMixin liveMixin, Vector3 position, DamageType type, GameObject dealer)
+    {
+        if (!liveMixin.TryGetComponent(out SubRoot subRoot) || !subRoot.isCyclops)
+        {
+            return false;
+        }
+
+        if (!liveMixin.TryGetNitroxId(out NitroxId cyclopsId))
+        {
+            return true;
+        }
+
+        dealer.TryGetNitroxId(out NitroxId dealerId);
+
+        CyclopsDamaged cyclopsDamaged = new(cyclopsId, liveMixin.health, position.ToDto(), type, Optional.OfNullable(dealerId));
+        Resolve<IPacketSender>().Send(cyclopsDamaged);
         return true;
     }
 

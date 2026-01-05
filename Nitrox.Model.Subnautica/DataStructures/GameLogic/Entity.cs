@@ -19,6 +19,7 @@ namespace Nitrox.Model.Subnautica.DataStructures.GameLogic
     [ProtoInclude(55, typeof(InstalledModuleEntity))]
     [ProtoInclude(56, typeof(WorldEntity))]
     [ProtoInclude(57, typeof(BaseLeakEntity))]
+    [ProtoInclude(58, typeof(CyclopsDamagePointEntity))]
     public abstract class Entity
     {
         [DataMember(Order = 1)]

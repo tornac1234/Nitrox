@@ -25,7 +25,6 @@ public static class VehicleChildEntityHelper
         typeof(CyclopsDecoyLoadingTube),
         typeof(BatterySource),
         typeof(SubNameInput),
-        typeof(WeldablePoint),
         typeof(CyclopsVehicleStorageTerminalManager),
         typeof(CyclopsLightingPanel)
     };

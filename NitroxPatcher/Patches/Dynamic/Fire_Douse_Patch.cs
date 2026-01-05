@@ -1,21 +1,21 @@
-﻿using System.Reflection;
-using NitroxClient.GameLogic;
+using System.Reflection;
 
 namespace NitroxPatcher.Patches.Dynamic;
 
 public sealed partial class Fire_Douse_Patch : NitroxPatch, IDynamicPatch
 {
-    public static readonly MethodInfo TARGET_METHOD = Reflect.Method((Fire t) => t.Douse(default(float)));
+    //public static readonly MethodInfo TARGET_METHOD = Reflect.Method((Fire t) => t.Douse(default));
 
     public static void Postfix(Fire __instance, float amount)
     {
+        // TODO: fill those
         if (!__instance.livemixin.IsAlive() || __instance.IsExtinguished())
         {
-            Resolve<Fires>().OnDouse(__instance, 10000);
+
         }
         else
         {
-            Resolve<Fires>().OnDouse(__instance, amount);
+
         }
     }
 }
