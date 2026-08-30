@@ -1,8 +1,7 @@
 using FMOD.Studio;
-using NitroxClient.GameLogic;
 using Nitrox.Model.GameLogic.FMOD;
-using Nitrox.Model.Packets;
 using Nitrox.Model.Subnautica.Packets;
+using NitroxClient.GameLogic;
 using UnityEngine;
 
 namespace NitroxClient.MonoBehaviours.Vehicles;
@@ -65,6 +64,14 @@ public class SeamothMovementReplicator : VehicleMovementReplicator
         revSound.GetEventInstance().setVolume(volumeRevSound);
 
         throttleApplied = vehicleMovementData.ThrottleApplied && drivingPlayer != null;
+    }
+
+    public override void SetCoordinates(Vector3 position, Quaternion rotation)
+    {
+        if (!seaMoth.isGrabbed && !seaMoth.docked)
+        {
+            base.SetCoordinates(position, rotation);
+        }
     }
 
     private void SetupSound()
