@@ -18,18 +18,22 @@ public class EntityPositionBroadcaster : MonoBehaviour
     /// Dictionary of watched entities that don't follow spline movements.
     /// </summary>
     private readonly Dictionary<NitroxId, GameObject> regularEntities = [];
+
     /// <summary>
-    /// Dictionary of watched entities that follow spline movements.
+    /// Dictionary of watched entities that use the <see cref="Locomotion"/> behaviour (which is used by both <see cref="SwimBehaviour"/> and <see cref="WalkBehaviour"/>).
     /// </summary>
-    private readonly Dictionary<NitroxId, SwimBehaviour> splineEntities = [];
+    private readonly Dictionary<NitroxId, SwimBehaviour> locomotionEntities = [];
+
     /// <summary>
     /// Set of watched entities that weren't spawned yet.
     /// </summary>
     private readonly HashSet<NitroxId> notSpawnedEntityIds = [];
+
     /// <summary>
-    /// Latest registered spline updates from SplineFollowing.GoTo
+    /// Latest registered locomotion updates from <see cref="SwimBehaviour.GoToInternal(Vector3, Vector3, float)"/> and <see cref="WalkBehaviour.GoToInternal(Vector3, Vector3, float)"/>
     /// </summary>
-    private readonly Dictionary<NitroxId, SplineTransformUpdate> splineUpdatesById = [];
+    private readonly Dictionary<NitroxId, LocomotionUpdate> locomotionUpdatesById = [];
+
     /// <summary>
     /// Reusable list of <see cref="EntityTransformUpdate"/>s to avoid reallocating a new list at each broadcast.
     /// </summary>
@@ -88,15 +92,15 @@ public class EntityPositionBroadcaster : MonoBehaviour
         }
 
         // Only send data for entities still simulated by the local player
-        foreach (SplineTransformUpdate splineUpdate in splineUpdatesById.Values)
+        foreach (LocomotionUpdate locomotionUpdate in locomotionUpdatesById.Values)
         {
-            if (simulationOwnership.HasAnyLockType(splineUpdate.Id))
+            if (locomotionEntities.ContainsKey(locomotionUpdate.Id) && simulationOwnership.HasAnyLockType(locomotionUpdate.Id))
             {
-                updates.Add(splineUpdate);
+                updates.Add(locomotionUpdate);
             }
         }
         
-        splineUpdatesById.Clear();
+        locomotionUpdatesById.Clear();
     }
 
     public void WatchEntity(NitroxId id)
@@ -119,7 +123,7 @@ public class EntityPositionBroadcaster : MonoBehaviour
     {
         if (entityObject.TryGetComponent(out SwimBehaviour swimBehaviour) && swimBehaviour.enabled)
         {
-            splineEntities[nitroxId] = swimBehaviour;
+            locomotionEntities[nitroxId] = swimBehaviour;
         }
         else
         {
@@ -135,7 +139,7 @@ public class EntityPositionBroadcaster : MonoBehaviour
     private void CheckEntities()
     {
         // when fishes die, they're only a corpse and their swim behaviour stops functioning
-        splineEntities.RemoveWhere(pair =>
+        locomotionEntities.RemoveWhere(pair =>
         {
             SwimBehaviour swimBehaviour = pair.Value;
 
@@ -178,17 +182,14 @@ public class EntityPositionBroadcaster : MonoBehaviour
 
     public void StopWatchingEntity(NitroxId id)
     {
-        splineEntities.Remove(id);
+        locomotionEntities.Remove(id);
         regularEntities.Remove(id);
         notSpawnedEntityIds.Remove(id);
     }
 
-    public void RegisterSplineMovementChange(NitroxId id, GameObject gameObject, Vector3 targetPos, Vector3 targetDir, float velocity)
+    public void RegisterLocomotionChange(NitroxId entityId, GameObject gameObject, Vector3 targetPos, Vector3 targetDir, float velocity)
     {
-        if (splineEntities.ContainsKey(id))
-        {
-            splineUpdatesById[id] = new(id, gameObject.transform.position.ToDto(), gameObject.transform.rotation.ToDto(), targetPos.ToDto(), targetDir.ToDto(), velocity);
-        }
+        locomotionUpdatesById[entityId] = new(entityId, gameObject.transform.position.ToDto(), gameObject.transform.rotation.ToDto(), targetPos.ToDto(), targetDir.ToDto(), velocity);
     }
 
     public void RemoveEntityMovementControl(GameObject gameObject, NitroxId entityId)

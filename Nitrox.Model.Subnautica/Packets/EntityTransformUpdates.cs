@@ -7,66 +7,42 @@ using Nitrox.Model.Packets;
 namespace Nitrox.Model.Subnautica.Packets;
 
 [Serializable]
-public class EntityTransformUpdates : Packet
+public class EntityTransformUpdates(List<EntityTransformUpdates.EntityTransformUpdate> updates) : Packet
 {
-    public List<EntityTransformUpdate> Updates { get; }
-
-    public EntityTransformUpdates(List<EntityTransformUpdate> updates)
-    {
-        Updates = updates;
-    }
+    public List<EntityTransformUpdate> Updates { get; } = updates;
 
     public override string ToString()
     {
-        return $"[EntityTransformUpdates: {String.Join(" ", Updates)} ]";
+        return $"[{nameof(EntityTransformUpdates)}: {string.Join(" ", Updates)} ]";
     }
 
     [Serializable]
-    public abstract class EntityTransformUpdate
+    public abstract class EntityTransformUpdate(NitroxId id, NitroxVector3 position, NitroxQuaternion rotation)
     {
-        public NitroxId Id { get; }
-        public NitroxVector3 Position { get; }
-        public NitroxQuaternion Rotation { get; }
+        public NitroxId Id { get; } = id;
+        public NitroxVector3 Position { get; } = position;
+        public NitroxQuaternion Rotation { get; } = rotation;
+    }
 
-        public EntityTransformUpdate(NitroxId id, NitroxVector3 position, NitroxQuaternion rotation)
+    [Serializable]
+    public class RawTransformUpdate(NitroxId id, NitroxVector3 position, NitroxQuaternion rotation) : EntityTransformUpdate(id, position, rotation)
+    {
+        public override string ToString()
         {
-            Id = id;
-            Position = position;
-            Rotation = rotation;
+            return $"[{nameof(RawTransformUpdate)} Id: {Id}, Position: {Position}, Rotation: {Rotation}]";
         }
     }
 
     [Serializable]
-    public class RawTransformUpdate : EntityTransformUpdate
+    public class LocomotionUpdate(NitroxId id, NitroxVector3 position, NitroxQuaternion rotation, NitroxVector3 destinationPosition, NitroxVector3 destinationDirection, float velocity) : EntityTransformUpdate(id, position, rotation)
     {
-        public RawTransformUpdate(NitroxId id, NitroxVector3 position, NitroxQuaternion rotation) : base(id, position, rotation)
-        {
-
-        }
+        public NitroxVector3 DestinationPosition { get; } = destinationPosition;
+        public NitroxVector3 DestinationDirection { get; } = destinationDirection;
+        public float Velocity { get; } = velocity;
 
         public override string ToString()
         {
-            return $"[RawTransformUpdate Id:{Id} Position:{Position} Rotation:{Rotation}]";
-        }
-    }
-
-    [Serializable]
-    public class SplineTransformUpdate : EntityTransformUpdate
-    {
-        public NitroxVector3 DestinationPosition { get; }
-        public NitroxVector3 DestinationDirection { get; }
-        public float Velocity { get; }
-
-        public SplineTransformUpdate(NitroxId id, NitroxVector3 position, NitroxQuaternion rotation, NitroxVector3 destinationPosition, NitroxVector3 destinationDirection, float velocity) : base(id, position, rotation)
-        {
-            DestinationPosition = destinationPosition;
-            DestinationDirection = destinationDirection;
-            Velocity = velocity;
-        }
-
-        public override string ToString()
-        {
-            return $"[SplineTransformUpdate Id:{Id} Position:{Position} Rotation:{Rotation} DestinationPosition:{DestinationPosition} DestinationDirection:{DestinationDirection} Velocity:{Velocity} ]";
+            return $"[{nameof(LocomotionUpdate)} Id: {Id}, Position: {Position}, Rotation: {Rotation}, DestinationPosition: {DestinationPosition}, DestinationDirection: {DestinationDirection}, Velocity: {Velocity}]";
         }
     }
 }

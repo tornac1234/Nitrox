@@ -27,13 +27,14 @@ internal sealed class EntityTransformUpdatesProcessor(SimulationOwnership simula
             Vector3 position = update.Position.ToUnity();
             Quaternion rotation = update.Rotation.ToUnity();
 
-            if (update is SplineTransformUpdate splineUpdate)
+            switch (update)
             {
-                remotelyControlled.UpdateKnownSplineUser(position, rotation, splineUpdate.DestinationPosition.ToUnity(), splineUpdate.DestinationDirection.ToUnity(), splineUpdate.Velocity);
-            }
-            else
-            {
-                remotelyControlled.UpdateOrientation(position, rotation);
+                case LocomotionUpdate locomotionUpdate:
+                    remotelyControlled.UpdateLocomotion(position, rotation, locomotionUpdate.DestinationPosition.ToUnity(), locomotionUpdate.DestinationDirection.ToUnity(), locomotionUpdate.Velocity);
+                    break;
+                default:
+                    remotelyControlled.UpdateOrientation(position, rotation);
+                    break;
             }
         }
         return Task.CompletedTask;

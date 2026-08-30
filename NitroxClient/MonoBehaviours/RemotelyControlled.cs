@@ -21,17 +21,17 @@ public class RemotelyControlled : MonoBehaviour
         rigidbody = gameObject.GetComponent<Rigidbody>();
         worldForces = gameObject.GetComponent<WorldForces>();
 
-        bool followsSpline = swimBehaviour && swimBehaviour.enabled;
+        bool hasLocomotion = swimBehaviour && swimBehaviour.enabled;
         if (rigidbody)
         {
             rigidbody.interpolation = RigidbodyInterpolation.Interpolate;
-            if (followsSpline)
+            if (hasLocomotion)
             {
                 rigidbody.isKinematic = false;
             }
         }
 
-        if (worldForces && !followsSpline)
+        if (worldForces && !hasLocomotion)
         {
             disabledWorldForces = worldForces.enabled;
             worldForces.enabled = false;
@@ -100,38 +100,39 @@ public class RemotelyControlled : MonoBehaviour
         smoothRotation.Target = rotation;
     }
 
-    public void UpdateKnownSplineUser(Vector3 currentPosition, Quaternion currentRotation, Vector3 destination, Vector3 destinationDirection, float velocity)
+    public void UpdateLocomotion(Vector3 currentPosition, Quaternion currentRotation, Vector3 destination, Vector3 destinationDirection, float velocity)
     {
+        // SwimBehaviour and WalkBehaviour will act the exact same, they both rely on their own GoToInternal
+        if (!swimBehaviour || !swimBehaviour.enabled)
+        {
+            return;
+        }
+
         bool teleported = TeleportIfTooFar(currentPosition, currentRotation, GetTeleportThreshold(velocity));
 
-        // SwimBehaviour and WalkBehaviour will act the exact same
-        if (swimBehaviour && swimBehaviour.enabled)
+        float adjustedVelocity = velocity;
+        if (!teleported)
         {
-            float adjustedVelocity = velocity;
+            float distance = Vector3.Distance(currentPosition, destination);
 
-            if (!teleported)
+            // avoid too short paths
+            if (distance > 0.1f)
             {
-                float distance = Vector3.Distance(currentPosition, destination);
+                float localDistance = Vector3.Distance(transform.position, destination);
 
-                // avoid too short paths
-                if (distance > 0.1f)
-                {
-                    float localDistance = Vector3.Distance(transform.position, destination);
+                adjustedVelocity *= localDistance / distance;
 
-                    adjustedVelocity *= localDistance / distance;
-
-                    adjustedVelocity = Mathf.Clamp(adjustedVelocity, velocity * 0.5f, velocity * 1.5f);
-                }
+                adjustedVelocity = Mathf.Clamp(adjustedVelocity, velocity * 0.5f, velocity * 1.5f);
             }
-
-            // Adjust the target data and velocity
-            swimBehaviour.originalTargetPosition = destination;
-            swimBehaviour.originalTargetDirection = destinationDirection;
-            swimBehaviour.originalVelocity = adjustedVelocity;
-
-            // Trigger either SwimBehaviour.GoToInternal or WalkBehaviour.GoToInternal so they use their own way to pass the data to the SplineFollowing
-            swimBehaviour.GoToInternal(destination, destinationDirection, adjustedVelocity);
         }
+
+        // Adjust the target data and velocity
+        swimBehaviour.originalTargetPosition = destination;
+        swimBehaviour.originalTargetDirection = destinationDirection;
+        swimBehaviour.originalVelocity = adjustedVelocity;
+
+        // Trigger either SwimBehaviour.GoToInternal or WalkBehaviour.GoToInternal so they use their own way to pass the data to the SplineFollowing
+        swimBehaviour.GoToInternal(destination, destinationDirection, adjustedVelocity);
     }
 
     private bool TeleportIfTooFar(Vector3 position, Quaternion rotation, float teleportThreshold)
