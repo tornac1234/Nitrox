@@ -6,24 +6,24 @@ namespace Nitrox.Model.Subnautica.DataStructures.GameLogic.Entities.Metadata;
 
 [Serializable]
 [DataContract]
-public class FlashlightMetadata : EntityMetadata
+public class ToggleLightsMetadata : EntityMetadata
 {
     [DataMember(Order = 1)]
-    public bool On { get; }
+    public bool Active { get; }
 
     [IgnoreConstructor]
-    protected FlashlightMetadata()
+    protected ToggleLightsMetadata()
     {
         // Constructor for serialization. Has to be "protected" for json serialization.
     }
 
-    public FlashlightMetadata(bool on)
+    public ToggleLightsMetadata(bool active)
     {
-        On = on;
+        Active = active;
     }
 
     public override string ToString()
     {
-        return $"[FlashlightMetadata On: {On}]";
+        return $"[{nameof(ToggleLightsMetadata)} Active: {Active}]";
     }
 }

@@ -34,7 +34,6 @@ internal sealed class DefaultServerPacketProcessor(ILogger<DefaultServerPacketPr
         typeof(StasisSphereShot),
         typeof(StasisSphereHit),
         typeof(SeaTreaderChunkPickedUp),
-        typeof(ToggleLights)
     ];
 
     public async Task Process(AuthProcessorContext context, Packet packet)

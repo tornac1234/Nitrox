@@ -17,7 +17,7 @@ namespace Nitrox.Model.Subnautica.DataStructures.GameLogic.Entities.Metadata;
 [ProtoInclude(58, typeof(IncubatorMetadata))]
 [ProtoInclude(59, typeof(EntitySignMetadata))]
 [ProtoInclude(60, typeof(ConstructorMetadata))]
-[ProtoInclude(61, typeof(FlashlightMetadata))]
+[ProtoInclude(61, typeof(ToggleLightsMetadata))]
 [ProtoInclude(62, typeof(BatteryMetadata))]
 [ProtoInclude(63, typeof(EscapePodMetadata))]
 [ProtoInclude(64, typeof(CrafterMetadata))]

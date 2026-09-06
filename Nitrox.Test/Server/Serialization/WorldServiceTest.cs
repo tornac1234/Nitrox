@@ -205,8 +205,8 @@ internal sealed class WorldServiceTest
             case ConstructorMetadata metadata when entityAfter.Metadata is ConstructorMetadata metadataAfter:
                 Assert.AreEqual(metadata.Deployed, metadataAfter.Deployed);
                 break;
-            case FlashlightMetadata metadata when entityAfter.Metadata is FlashlightMetadata metadataAfter:
-                Assert.AreEqual(metadata.On, metadataAfter.On);
+            case ToggleLightsMetadata metadata when entityAfter.Metadata is ToggleLightsMetadata metadataAfter:
+                Assert.AreEqual(metadata.Active, metadataAfter.Active);
                 break;
             case BatteryMetadata metadata when entityAfter.Metadata is BatteryMetadata metadataAfter:
                 Assert.AreEqual(metadata.Charge, metadataAfter.Charge);
