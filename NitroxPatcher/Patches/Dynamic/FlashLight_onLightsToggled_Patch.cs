@@ -15,7 +15,7 @@ public sealed partial class FlashLight_onLightsToggled_Patch : NitroxPatch, IDyn
 
     public static void Postfix(FlashLight __instance)
     {
-        if (__instance.TryGetIdOrWarn(out NitroxId id))
+        if (__instance.usingPlayer && __instance.TryGetIdOrWarn(out NitroxId id))
         {
             ToggleLightsMetadataExtractor flashlightMetadataExtractor = Resolve<ToggleLightsMetadataExtractor>();
             ToggleLightsMetadata flashlightMetadata = flashlightMetadataExtractor.Extract(__instance.toggleLights);

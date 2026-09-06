@@ -12,10 +12,10 @@ public sealed partial class Battery_charge_set_Patch : NitroxPatch, IDynamicPatc
     public static void Prefix(Battery __instance, float value)
     {
         // Broadcast update only once per integer change
-        if (Math.Abs(Math.Floor(__instance.charge) - Math.Floor(value)) > 0.0 &&
+        if (Math.Abs(Math.Floor(__instance.charge) - Math.Floor(value)) > 0d &&
             __instance.TryGetIdOrWarn(out NitroxId id))
         {
-            Resolve<Entities>().EntityMetadataChanged(__instance, id);
+            Resolve<Entities>().EntityMetadataChangedThrottled(__instance, id);
         }
     }
 }

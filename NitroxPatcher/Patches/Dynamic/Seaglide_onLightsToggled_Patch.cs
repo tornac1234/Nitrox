@@ -15,7 +15,7 @@ public sealed partial class Seaglide_onLightsToggled_Patch : NitroxPatch, IDynam
 
     public static void Prefix(Seaglide __instance, bool active)
     {
-        if (__instance.TryGetIdOrWarn(out NitroxId id))
+        if (__instance.usingPlayer && __instance.TryGetIdOrWarn(out NitroxId id))
         {
             ToggleLightsMetadataExtractor flashlightMetadataExtractor = Resolve<ToggleLightsMetadataExtractor>();
             ToggleLightsMetadata flashlightMetadata = flashlightMetadataExtractor.Extract(__instance.toggleLights);
